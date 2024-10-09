@@ -113,32 +113,32 @@
                 result += `${trait.name} : ${percentage} %${trait.emoji}\n`;
             });
             result += 'Controlla il tuo 👇👇\n';
-            result += 'Prova anche tu clicca qui: https://alelav79.github.io/platform-pages/';
+            result += 'Prova anche tu clicca qui: <a href="https://alelav79.github.io/platform-pages/">https://alelav79.github.io/platform-pages/</a>';
 
-            document.getElementById('result').textContent = result;
+            document.getElementById('result').innerHTML = result;
             document.getElementById('copyButton').style.display = 'block';
         }
 
         function copyToClipboard() {
-            const resultText = document.getElementById('result').textContent;
+            const resultHTML = document.getElementById('result').innerHTML;
             
             if (navigator.clipboard && window.isSecureContext) {
                 // Per browser moderni
-                navigator.clipboard.writeText(resultText).then(() => {
+                navigator.clipboard.writeText(resultHTML).then(() => {
                     alert('Testo copiato negli appunti!');
                 }).catch(err => {
                     console.error('Errore nella copia del testo: ', err);
-                    fallbackCopyTextToClipboard(resultText);
+                    fallbackCopyTextToClipboard(resultHTML);
                 });
             } else {
                 // Fallback per browser meno recenti o contesti non sicuri
-                fallbackCopyTextToClipboard(resultText);
+                fallbackCopyTextToClipboard(resultHTML);
             }
         }
 
-        function fallbackCopyTextToClipboard(text) {
+        function fallbackCopyTextToClipboard(html) {
             const textArea = document.createElement("textarea");
-            textArea.value = text;
+            textArea.value = html;
             
             // Evita lo scrolling alla bottom
             textArea.style.top = "0";
