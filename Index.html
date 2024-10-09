@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore di Personalità</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
+            background-size: 1800% 1800%;
+            animation: rainbow 18s ease infinite;
+        }
+
+        @keyframes rainbow { 
+            0%{background-position:0% 82%}
+            50%{background-position:100% 19%}
+            100%{background-position:0% 82%}
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        input {
+            background-color: #f0f0f0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #result {
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 5px;
+            padding: 15px;
+            white-space: pre-wrap;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        #copyButton {
+            display: none;
+            background-color: #008CBA;
+        }
+
+        #copyButton:hover {
+            background-color: #007B9A;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generatore di Personalità</h1>
+        <input type="text" id="nameInput" placeholder="Inserisci il tuo nome">
+        <button onclick="generatePersonality()">Genera</button>
+        <div id="result"></div>
+        <button id="copyButton" onclick="copyToClipboard()">Copia</button>
+    </div>
+
+    <script>
+        function generatePersonality() {
+            const name = document.getElementById('nameInput').value;
+            if (!name) {
+                alert('Per favore, inserisci un nome.');
+                return;
+            }
+
+            const traits = [
+                { name: 'Affidabilità', emoji: '😍' },
+                { name: 'Sorriso', emoji: '😁' },
+                { name: 'Cura', emoji: '🤗' },
+                { name: 'Rispetto', emoji: '😊' },
+                { name: 'Amore', emoji: '❤️' }
+            ];
+
+            let result = `${name} Personalità\n`;
+            traits.forEach(trait => {
+                const percentage = Math.floor(Math.random() * 15) + 85; // 85-99%
+                result += `${trait.name} : ${percentage} %${trait.emoji}\n`;
+            });
+            result += 'Controlla il tuo 👇👇';
+
+            document.getElementById('result').textContent = result;
+            document.getElementById('copyButton').style.display = 'block';
+        }
+
+        function copyToClipboard() {
+            const resultText = document.getElementById('result').textContent;
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                // Per browser moderni
+                navigator.clipboard.writeText(resultText).then(() => {
+                    alert('Testo copiato negli appunti!');
+                }).catch(err => {
+                    console.error('Errore nella copia del testo: ', err);
+                    fallbackCopyTextToClipboard(resultText);
+                });
+            } else {
+                // Fallback per browser meno recenti o contesti non sicuri
+                fallbackCopyTextToClipboard(resultText);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            // Evita lo scrolling alla bottom
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                const msg = successful ? 'Testo copiato negli appunti!' : 'Copia non riuscita';
+                alert(msg);
+            } catch (err) {
+                console.error('Fallback: Oops, impossibile copiare', err);
+                alert('Copia non riuscita. Per favore, copia il testo manualmente.');
+            }
+
+            document.body.removeChild(textArea);
+        }
+    </script>
+</body>
+</html>
