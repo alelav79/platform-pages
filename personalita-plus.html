@@ -1,0 +1,364 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generatore di Personalità</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(124deg, #ff2400, #e81d1d, #e8b71d, #e3e81d, #1de840, #1ddde8, #2b1de8, #dd00f3, #dd00f3);
+            background-size: 1800% 1800%;
+            animation: rainbow 18s ease infinite;
+        }
+
+        @keyframes rainbow { 
+            0%{background-position:0% 82%}
+            50%{background-position:100% 19%}
+            100%{background-position:0% 82%}
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 450px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            background-color: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .tab.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background-color: #e0e0e0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input {
+            background-color: #f8f8f8;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+
+        #result, #rainbowResult {
+            margin-top: 20px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            white-space: pre-wrap;
+            text-align: left;
+            font-size: 14px;
+            border: 2px solid #e0e0e0;
+        }
+
+        #rainbowResult {
+            text-align: center;
+            font-size: 24px;
+            line-height: 1.2;
+        }
+
+        .copy-button {
+            display: none;
+            background-color: #008CBA;
+            margin-top: 10px;
+        }
+
+        .copy-button:hover {
+            background-color: #007B9A;
+        }
+
+        .emoji-controls {
+            margin-bottom: 15px;
+        }
+
+        .emoji-controls label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .emoji-controls input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: -5px;
+        }
+
+        .rainbow-emoji {
+            display: inline-block;
+            animation: bounce 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-5px); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(300px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌈 Generatore Magico 🌈</h1>
+        
+        <div class="tab-container">
+            <button class="tab active" onclick="switchTab('personality')">👤 Personalità</button>
+            <button class="tab" onclick="switchTab('rainbow')">🌈 Arcobaleno</button>
+        </div>
+
+        <!-- Tab Personalità -->
+        <div id="personalityTab" class="tab-content active">
+            <input type="text" id="nameInput" placeholder="Inserisci il tuo nome">
+            <button onclick="generatePersonality()">✨ Genera Personalità</button>
+            <div id="result"></div>
+            <button id="copyButtonPersonality" class="copy-button" onclick="copyPersonality()">📋 Copia Personalità</button>
+        </div>
+
+        <!-- Tab Arcobaleno -->
+        <div id="rainbowTab" class="tab-content">
+            <div class="emoji-controls">
+                <label for="rainbowLength">Lunghezza arcobaleno:</label>
+                <input type="range" id="rainbowLength" min="5" max="50" value="20">
+                <div class="range-labels">
+                    <span>Corto</span>
+                    <span>Lungo</span>
+                </div>
+            </div>
+            <button onclick="generateRainbow()">🌈 Genera Arcobaleno</button>
+            <div id="rainbowResult"></div>
+            <button id="copyButtonRainbow" class="copy-button" onclick="copyRainbow()">📋 Copia Arcobaleno</button>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        function switchTab(tabName) {
+            // Nasconde tutti i contenuti
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Rimuove la classe active da tutti i tab
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostra il contenuto selezionato
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Attiva il tab selezionato
+            event.target.classList.add('active');
+        }
+
+        function generatePersonality() {
+            const name = document.getElementById('nameInput').value;
+            if (!name) {
+                showNotification('⚠️ Per favore, inserisci un nome!', '#ff6b6b');
+                return;
+            }
+
+            const traits = [
+                { name: 'Affidabilità', emoji: '😍' },
+                { name: 'Sorriso', emoji: '😁' },
+                { name: 'Cura', emoji: '🤗' },
+                { name: 'Rispetto', emoji: '😊' },
+                { name: 'Amore', emoji: '❤️' }
+            ];
+
+            let result = `✨ ${name} Personalità ✨\n\n`;
+            traits.forEach(trait => {
+                const percentage = Math.floor(Math.random() * 15) + 85; // 85-99%
+                result += `${trait.name}: ${percentage}% ${trait.emoji}\n`;
+            });
+            result += '\n🔮 Controlla il tuo 👇👇\n';
+            result += '✨ Prova anche tu clicca qui: https://alelav79.github.io/platform-pages/';
+
+            document.getElementById('result').textContent = result;
+            document.getElementById('copyButtonPersonality').style.display = 'block';
+            
+            showNotification('✅ Personalità generata con successo!');
+        }
+
+        function generateRainbow() {
+            const length = document.getElementById('rainbowLength').value;
+            const rainbowEmojis = ['🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '🌈', '⭐', '✨', '💫'];
+            
+            let rainbow = '';
+            for (let i = 0; i < length; i++) {
+                const randomEmoji = rainbowEmojis[Math.floor(Math.random() * rainbowEmojis.length)];
+                rainbow += `<span class="rainbow-emoji" style="animation-delay: ${i * 0.1}s">${randomEmoji}</span>`;
+            }
+            
+            document.getElementById('rainbowResult').innerHTML = rainbow;
+            document.getElementById('copyButtonRainbow').style.display = 'block';
+            
+            showNotification('🌈 Arcobaleno magico creato!');
+        }
+
+        function copyPersonality() {
+            const result = document.getElementById('result').textContent;
+            copyToClipboard(result, '✅ Personalità copiata negli appunti!');
+        }
+
+        function copyRainbow() {
+            const rainbowHTML = document.getElementById('rainbowResult');
+            const rainbowText = rainbowHTML.innerText || rainbowHTML.textContent;
+            copyToClipboard(rainbowText, '🌈 Arcobaleno copiato negli appunti!');
+        }
+
+        function copyToClipboard(text, successMessage) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showNotification(successMessage);
+                }).catch(err => {
+                    console.error('Errore nella copia del testo: ', err);
+                    fallbackCopyTextToClipboard(text, successMessage);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text, successMessage);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text, successMessage) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showNotification(successMessage);
+                } else {
+                    showNotification('❌ Copia non riuscita', '#ff6b6b');
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, impossibile copiare', err);
+                showNotification('❌ Copia non riuscita. Copia manualmente il testo.', '#ff6b6b');
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        function showNotification(message, color = '#4CAF50') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.backgroundColor = color;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Aggiorna il valore del range in tempo reale
+        document.getElementById('rainbowLength').addEventListener('input', function() {
+            const value = this.value;
+            this.setAttribute('title', `Lunghezza: ${value} emoji`);
+        });
+    </script>
+</body>
+</html>
