@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Space Launches - Upcoming Events</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: slideDown 0.6s ease-out;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            font-size: 1.1em;
+            color: #b0b0b0;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            animation: slideUp 0.6s ease-out 0.2s backwards;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(102, 126, 234, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            color: #fca5a5;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .launches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            animation: fadeIn 0.6s ease-out 0.3s backwards;
+        }
+
+        .launch-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            animation: cardSlide 0.5s ease-out;
+        }
+
+        .launch-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .launch-card:hover::before {
+            left: 100%;
+        }
+
+        .launch-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(102, 126, 234, 0.5);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+        }
+
+        .launch-status {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-go {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+
+        .status-tbd {
+            background: rgba(248, 113, 113, 0.2);
+            color: #fca5a5;
+        }
+
+        .status-hold {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fdba74;
+        }
+
+        .launch-name {
+            font-size: 1.4em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            line-height: 1.3;
+            color: #fff;
+        }
+
+        .launch-details {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            color: #d0d0d0;
+            font-size: 0.95em;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            gap: 10px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #a0a0a0;
+            min-width: 100px;
+        }
+
+        .detail-value {
+            text-align: right;
+            flex: 1;
+        }
+
+        .rocket-icon {
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            margin-top: 12px;
+            background: rgba(37, 211, 102, 0.2);
+            border: 1px solid rgba(37, 211, 102, 0.4);
+            color: #25d366;
+            font-size: 0.9em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .share-btn:hover {
+            background: rgba(37, 211, 102, 0.3);
+            border-color: rgba(37, 211, 102, 0.6);
+            transform: scale(1.05);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #909090;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+            color: #c0c0c0;
+        }
+
+        .empty-state-text {
+            font-size: 1.05em;
+            line-height: 1.6;
+        }
+
+        .share-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            margin-top: 12px;
+            background: rgba(37, 211, 102, 0.2);
+            border: 1px solid rgba(37, 211, 102, 0.4);
+            color: #25d366;
+            font-size: 0.9em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .share-btn:hover {
+            background: rgba(37, 211, 102, 0.3);
+            border-color: rgba(37, 211, 102, 0.6);
+            transform: scale(1.05);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes cardSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #808080;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .launches-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Space Launches</h1>
+            <p>Prossimi eventi di lancio spaziale</p>
+        </header>
+
+        <div class="controls">
+            <button id="loadBtn" onclick="loadLaunches()">Carica Lanci</button>
+            <button id="refreshBtn" onclick="refreshLaunches()" disabled>Aggiorna</button>
+            <button id="clearBtn" onclick="clearData()" disabled>Cancella</button>
+        </div>
+
+        <div id="errorContainer"></div>
+        <div id="loadingContainer" style="display: none;" class="loading">
+            <div class="spinner"></div>
+            <span>Caricamento dati...</span>
+        </div>
+        <div id="launchesContainer"></div>
+        <footer>
+            <p>Dati forniti da <strong>The Space Devs</strong> API | Ultimo aggiornamento: <span id="lastUpdate">-</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Uso YouRLS o un servizio CORS affidabile
+        const PROXIES = [
+            'https://corsproxy.io/?',
+            'https://proxy.cors.sh/',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
+        
+        const API_ENDPOINT = 'https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=10';
+        let launchesData = [];
+
+        async function fetchWithProxy(url, proxyIndex = 0) {
+            if (proxyIndex >= PROXIES.length) {
+                // Ultimo tentativo: prova direttamente senza proxy
+                try {
+                    const response = await fetch(url);
+                    if (response.ok) return response.json();
+                } catch (e) {
+                    console.warn('Tentativo diretto fallito');
+                }
+                throw new Error('Impossibile raggiungere l\'API. Riprova tra pochi secondi.');
+            }
+
+            const proxyUrl = PROXIES[proxyIndex] + encodeURIComponent(url);
+            
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(proxyUrl, {
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'Mozilla/5.0'
+                    }
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const text = await response.text();
+                return JSON.parse(text);
+            } catch (error) {
+                console.warn(`Proxy ${proxyIndex} (${PROXIES[proxyIndex]}) fallito:`, error.message);
+                // Aspetta 500ms prima di provare il prossimo
+                await new Promise(resolve => setTimeout(resolve, 500));
+                return fetchWithProxy(url, proxyIndex + 1);
+            }
+        }
+
+        async function loadLaunches() {
+            const loadBtn = document.getElementById('loadBtn');
+            const loadingContainer = document.getElementById('loadingContainer');
+            const errorContainer = document.getElementById('errorContainer');
+            const launchesContainer = document.getElementById('launchesContainer');
+
+            try {
+                loadBtn.disabled = true;
+                loadingContainer.style.display = 'flex';
+                errorContainer.innerHTML = '';
+                launchesContainer.innerHTML = '';
+
+                const data = await fetchWithProxy(API_ENDPOINT);
+                launchesData = data.results || [];
+
+                loadingContainer.style.display = 'none';
+
+                if (launchesData.length === 0) {
+                    showEmptyState();
+                } else {
+                    displayLaunches();
+                    document.getElementById('refreshBtn').disabled = false;
+                    document.getElementById('clearBtn').disabled = false;
+                    updateLastModified();
+                }
+            } catch (error) {
+                loadingContainer.style.display = 'none';
+                showError(error.message);
+                console.error('Errore caricamento:', error);
+            } finally {
+                loadBtn.disabled = false;
+            }
+        }
+
+        function displayLaunches() {
+            const container = document.getElementById('launchesContainer');
+            container.innerHTML = '';
+
+            const launchesGrid = document.createElement('div');
+            launchesGrid.className = 'launches-grid';
+
+            launchesData.forEach((launch, index) => {
+                const card = createLaunchCard(launch, index);
+                launchesGrid.appendChild(card);
+            });
+
+            container.appendChild(launchesGrid);
+        }
+
+        function createLaunchCard(launch, index) {
+            const card = document.createElement('div');
+            card.className = 'launch-card';
+            card.style.animationDelay = `${index * 0.1}s`;
+
+            const launchDate = new Date(launch.net);
+            const formattedDate = launchDate.toLocaleDateString('it-IT', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'Europe/Rome'
+            });
+
+            // Estrai status correttamente - potrebbe essere un oggetto con .name o una stringa
+            let statusValue = 'TBD';
+            if (launch.status) {
+                if (typeof launch.status === 'object' && launch.status.name) {
+                    statusValue = launch.status.name;
+                } else if (typeof launch.status === 'string') {
+                    statusValue = launch.status;
+                }
+            }
+
+            const statusClass = getStatusClass(statusValue);
+            const statusText = getStatusText(statusValue);
+
+            // Parsing corretto dei dati annidati
+            const rocketName = launch.rocket?.configuration?.name || 'Razzo non disponibile';
+            const launchProvider = launch.launch_service_provider?.name || 'Provider sconosciuto';
+            const missionName = launch.mission?.name || launch.name || 'Missione senza nome';
+            const launchPad = launch.pad?.name || 'Sito non specificato';
+            const launchLocation = launch.pad?.location?.name || 'Luogo sconosciuto';
+
+            card.innerHTML = `
+                <div class="launch-status ${statusClass}">${statusText}</div>
+                <div class="launch-name"><span class="rocket-icon">🛸</span>${missionName}</div>
+                <div class="launch-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Data</span>
+                        <span class="detail-value">${formattedDate}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Razzo</span>
+                        <span class="detail-value">${rocketName}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Provider</span>
+                        <span class="detail-value">${launchProvider}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Pad</span>
+                        <span class="detail-value">${launchPad}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Luogo</span>
+                        <span class="detail-value">${launchLocation}</span>
+                    </div>
+                </div>
+                <button class="share-btn" data-mission="${missionName}" data-date="${formattedDate}" data-rocket="${rocketName}" data-provider="${launchProvider}" data-location="${launchLocation}" data-status="${statusText}">
+                    💬 Condividi
+                </button>
+            `;
+
+            // Aggiungi event listener al bottone
+            const shareBtn = card.querySelector('.share-btn');
+            shareBtn.addEventListener('click', function() {
+                const text = `🚀 ${this.dataset.mission}\n📅 ${this.dataset.date}\n🛸 ${this.dataset.rocket}\n🏢 ${this.dataset.provider}\n📍 ${this.dataset.location}\nStatus: ${this.dataset.status}`;
+                shareToWhatsApp(text);
+            });
+
+            return card;
+        }
+
+        function shareToWhatsApp(text) {
+            const encodedText = encodeURIComponent(text);
+            const whatsappURL = `https://wa.me/?text=${encodedText}`;
+            window.open(whatsappURL, '_blank');
+        }
+
+        function getStatusClass(statusValue) {
+            const statusMap = {
+                'Go': 'status-go',
+                'TBD': 'status-tbd',
+                'Hold': 'status-hold'
+            };
+            return statusMap[statusValue] || 'status-tbd';
+        }
+
+        function getStatusText(statusValue) {
+            return statusValue || 'TBD';
+        }
+
+        function showError(message) {
+            const errorContainer = document.getElementById('errorContainer');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = `<strong>⚠️ Errore:</strong> ${message}`;
+            errorContainer.appendChild(errorDiv);
+        }
+
+        function showEmptyState() {
+            const container = document.getElementById('launchesContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🌌</div>
+                    <div class="empty-state-title">Nessun lancio disponibile</div>
+                    <div class="empty-state-text">Riprova più tardi o verifica la connessione internet</div>
+                </div>
+            `;
+        }
+
+        function refreshLaunches() {
+            loadLaunches();
+        }
+
+        function clearData() {
+            launchesData = [];
+            document.getElementById('launchesContainer').innerHTML = '';
+            document.getElementById('errorContainer').innerHTML = '';
+            document.getElementById('refreshBtn').disabled = true;
+            document.getElementById('clearBtn').disabled = true;
+            document.getElementById('lastUpdate').textContent = '-';
+        }
+
+        function updateLastModified() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('it-IT', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('lastUpdate').textContent = timeString;
+        }
+
+        // Load pada inizio (opzionale)
+        window.addEventListener('load', () => {
+            // Decommentare se vuoi caricare automaticamente
+            // loadLaunches();
+        });
+    </script>
+</body>
+</html>
