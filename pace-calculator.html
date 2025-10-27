@@ -501,6 +501,53 @@
             height: 15px;
             border-radius: 3px;
         }
+
+        #chart {
+            cursor: crosshair;
+            transition: filter 0.2s ease;
+        }
+
+        #chart.dragging {
+            filter: brightness(1.05);
+        }
+
+        #paceList li {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #paceList li[draggable="true"] {
+            cursor: grab;
+        }
+
+        #paceList li[draggable="true"]:active {
+            cursor: grabbing;
+        }
+
+        .edit-km-modal {
+            position: absolute;
+            background: white;
+            border: 2px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .edit-km-modal input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .edit-km-modal button {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .edit-km-modal button:last-child {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -563,7 +610,7 @@
             
             <div class="info-box">
                 <span class="info-icon">ℹ</span>
-                <strong>Interazioni:</strong> Hover sul grafico per dettagli, clicca sui km per evidenziare
+                <strong>Interazioni:</strong> 🖱️ Trascina i punti nel grafico • 📋 Trascina gli elementi della lista • 🖐️ Clicca sui km per evidenziare • ⚙️ Modifica manualmente i valori
             </div>
             
             <div class="form-group">
@@ -858,6 +905,9 @@
             });
             
             updateChartLegend(chartColor);
+            
+            // Rendere gli elementi della lista draggabili
+            setTimeout(() => makePaceItemsDraggable(), 100);
         }
 
         function updateChartLegend(color) {
@@ -883,11 +933,118 @@
         }
 
         // ==================== INTERAZIONI GRAFICO ====================
+        const GraphicInteraction = {
+            isDragging: false,
+            draggedKm: null,
+            dragStartY: 0,
+            
+            init() {
+                const canvas = document.getElementById('chart');
+                canvas.addEventListener('mousedown', (e) => this.onCanvasMouseDown(e));
+                canvas.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
+                canvas.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
+                canvas.addEventListener('mouseleave', (e) => this.onCanvasMouseLeave(e));
+            },
+            
+            onCanvasMouseDown(e) {
+                if (!AppState.chart) return;
+                
+                const canvasPosition = Chart.helpers.getRelativePosition(e, AppState.chart);
+                const dataX = AppState.chart.scales.x.getValueForPixel(canvasPosition.x);
+                const dataY = AppState.chart.scales.y.getValueForPixel(canvasPosition.y);
+                
+                const kmIndex = Math.round(dataX);
+                
+                if (kmIndex >= 0 && kmIndex < AppState.currentPaces.length) {
+                    this.isDragging = true;
+                    this.draggedKm = kmIndex;
+                    this.dragStartY = canvasPosition.y;
+                    this.originalPace = AppState.currentPaces[kmIndex];
+                    
+                    highlightKm(kmIndex);
+                    this.showDragIndicator(kmIndex);
+                }
+            },
+            
+            onCanvasMouseMove(e) {
+                if (!this.isDragging || this.draggedKm === null) return;
+                
+                const canvasPosition = Chart.helpers.getRelativePosition(e, AppState.chart);
+                const currentDataY = AppState.chart.scales.y.getValueForPixel(canvasPosition.y);
+                
+                if (currentDataY > 0 && currentDataY < 15) {
+                    AppState.currentPaces[this.draggedKm] = currentDataY;
+                    this.updateChartData();
+                    this.showDragValue(this.draggedKm, currentDataY);
+                }
+            },
+            
+            onCanvasMouseUp(e) {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.removeDragIndicator();
+                    this.recalculateAndNormalize();
+                }
+            },
+            
+            onCanvasMouseLeave(e) {
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.removeDragIndicator();
+                    this.recalculateAndNormalize();
+                }
+            },
+            
+            updateChartData() {
+                if (!AppState.chart) return;
+                
+                AppState.chart.data.datasets[0].data = [...AppState.currentPaces];
+                AppState.chart.update('none');
+            },
+            
+            recalculateAndNormalize() {
+                const totalCalculatedTime = AppState.currentPaces.reduce((sum, pace) => sum + pace, 0);
+                const normalizationFactor = AppState.time / totalCalculatedTime;
+                
+                AppState.currentPaces = AppState.currentPaces.map(pace => pace * normalizationFactor);
+                this.updateChartData();
+                
+                UIManager.updatePaceList(AppState.currentPaces);
+                this.updateStats();
+            },
+            
+            updateStats() {
+                const stats = PaceCalculator.getStats(AppState.currentPaces, AppState.distance, AppState.time);
+                UIManager.updateStats(stats, document.getElementById('inclinationSlider').value);
+                updateChartLegend(document.getElementById('chartColor').value);
+            },
+            
+            showDragIndicator(kmIndex) {
+                const canvas = document.getElementById('chart');
+                canvas.style.cursor = 'grab';
+                canvas.classList.add('dragging');
+            },
+            
+            removeDragIndicator() {
+                const canvas = document.getElementById('chart');
+                canvas.style.cursor = 'default';
+                canvas.classList.remove('dragging');
+            },
+            
+            showDragValue(kmIndex, pace) {
+                const tooltip = document.getElementById('tooltip');
+                const formattedPace = PaceCalculator.formatPace(pace);
+                tooltip.innerHTML = `<strong>Km ${kmIndex + 1}</strong><br>Passo: ${formattedPace}<br><em>Trascinando...</em>`;
+                tooltip.classList.add('active');
+            }
+        };
+
         function highlightKm(kmIndex) {
             const paceItems = document.querySelectorAll('#paceList li');
             paceItems.forEach((item, index) => {
                 item.style.opacity = (index === kmIndex) ? '1' : '0.5';
                 item.style.transform = (index === kmIndex) ? 'scale(1.05)' : 'scale(1)';
+                item.style.backgroundColor = (index === kmIndex) ? 'rgba(67, 97, 238, 0.15)' : '';
             });
             
             AppState.selectedKm = kmIndex;
@@ -900,6 +1057,55 @@
             const formattedPace = PaceCalculator.formatPace(pace);
             tooltip.innerHTML = `<strong>Km ${kmIndex + 1}</strong><br>Passo: ${formattedPace}`;
             tooltip.classList.add('active');
+        }
+
+        // Aggiornamento lista passo con interazioni click e trascinamento
+        function makePaceItemsDraggable() {
+            const paceItems = document.querySelectorAll('#paceList li');
+            paceItems.forEach((item, index) => {
+                item.draggable = true;
+                
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', index);
+                    item.style.opacity = '0.5';
+                });
+                
+                item.addEventListener('dragend', (e) => {
+                    item.style.opacity = '1';
+                    paceItems.forEach(el => el.style.borderTop = '');
+                });
+                
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    item.style.borderTop = '3px solid var(--primary-color)';
+                });
+                
+                item.addEventListener('dragleave', (e) => {
+                    item.style.borderTop = '';
+                });
+                
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    
+                    if (fromIndex !== toIndex) {
+                        swapPaces(fromIndex, toIndex);
+                    }
+                    item.style.borderTop = '';
+                });
+            });
+        }
+
+        function swapPaces(fromIndex, toIndex) {
+            const temp = AppState.currentPaces[fromIndex];
+            AppState.currentPaces[fromIndex] = AppState.currentPaces[toIndex];
+            AppState.currentPaces[toIndex] = temp;
+            
+            GraphicInteraction.updateChartData();
+            UIManager.updatePaceList(AppState.currentPaces);
         }
 
         // ==================== INCLINAZIONE ====================
@@ -1033,6 +1239,11 @@ Generato da: Calcolatore di Passo v2.0`;
 
         // ==================== INIT ====================
         AppState.init();
+        
+        // Inizializzare le interazioni del grafico dopo il caricamento
+        document.addEventListener('DOMContentLoaded', () => {
+            GraphicInteraction.init();
+        });
     </script>
 </body>
 </html>
