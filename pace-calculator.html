@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calcolatore di Passo Avanzato</title>
+    <title>Calcolatore di Passo Avanzato v2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
     <style>
         :root {
             --primary-color: #4361ee;
@@ -13,17 +14,23 @@
             --light-color: #f8f9fa;
             --dark-color: #212529;
             --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
             --border-radius: 8px;
             --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             --transition: all 0.3s ease;
         }
         
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            max-width: 900px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0f2f5;
+            background: linear-gradient(135deg, #f0f2f5 0%, #e9ecef 100%);
             color: var(--dark-color);
             line-height: 1.6;
         }
@@ -38,7 +45,24 @@
             font-size: 2.2rem;
             margin-top: 0;
             padding: 20px 0;
-            border-bottom: 2px solid var(--accent-color);
+            border-bottom: 3px solid var(--accent-color);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
         }
         
         .container {
@@ -47,6 +71,11 @@
             box-shadow: var(--box-shadow);
             padding: 25px;
             margin-bottom: 20px;
+            transition: var(--transition);
+        }
+        
+        .container:hover {
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
         }
         
         .form-group {
@@ -55,18 +84,26 @@
         
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 600;
             color: var(--secondary-color);
+            font-size: 0.95rem;
         }
         
         input, select, button {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 10px 12px;
+            border: 2px solid #ddd;
             border-radius: var(--border-radius);
             font-size: 16px;
             transition: var(--transition);
+            font-family: inherit;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="datetime-local"],
+        select {
+            width: 100%;
         }
         
         input:focus, select:focus {
@@ -76,51 +113,150 @@
         }
         
         button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
             cursor: pointer;
             font-weight: 600;
-            margin-top: 10px;
+            border: none;
+            transition: var(--transition);
             height: 45px;
+            display: inline-block;
+            width: auto;
+            padding: 10px 20px;
         }
         
         button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+            height: 45px;
+            margin-top: 10px;
+        }
+        
+        .btn-primary:hover {
             background-color: var(--secondary-color);
         }
         
-        #copyButton {
-            background-color: var(--success-color);
+        .btn-secondary {
+            background-color: var(--accent-color);
+            color: white;
+            margin-right: 10px;
         }
         
-        #copyButton:hover {
+        .btn-secondary:hover {
+            background-color: #3a7fbf;
+        }
+        
+        .btn-copy {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-copy:hover {
             background-color: #388e3c;
         }
         
+        .btn-reset {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-reset:hover {
+            background-color: #d32f2f;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
         #result {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.3rem;
+            font-weight: 700;
             text-align: center;
             margin: 20px 0;
-            padding: 15px;
-            background-color: var(--light-color);
+            padding: 20px;
+            background: linear-gradient(135deg, var(--light-color), #fff);
             border-radius: var(--border-radius);
+            color: var(--primary-color);
+            border-left: 4px solid var(--accent-color);
+            display: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .stat-box {
+            background: linear-gradient(135deg, var(--light-color), #fff);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--accent-color);
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
             color: var(--primary-color);
         }
         
-        #chart {
+        .chart-container {
+            position: relative;
+            height: 400px;
             margin: 25px 0;
             background-color: white;
             border-radius: var(--border-radius);
-            padding: 10px;
+            padding: 15px;
             box-shadow: var(--box-shadow);
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .chart-controls select {
+            width: auto;
+            flex: 1;
+            min-width: 150px;
         }
         
         .inclination-controls {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--light-color), #fff);
+            padding: 15px;
+            border-radius: var(--border-radius);
         }
         
         .inclination-controls button {
@@ -129,24 +265,34 @@
             padding: 0;
             font-size: 18px;
             font-weight: bold;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+        }
+        
+        .inclination-controls button:hover {
+            background-color: var(--primary-color);
         }
         
         .inclination-controls input[type="number"] {
-            width: 80px;
+            width: 70px;
             text-align: center;
         }
         
         #inclinationValue {
             font-weight: 600;
             color: var(--accent-color);
-            width: 50px;
+            width: 60px;
+            text-align: center;
         }
         
         #inclinationSlider {
             -webkit-appearance: none;
-            height: 10px;
+            width: 100%;
+            height: 8px;
             border-radius: 5px;
-            background: #ddd;
+            background: linear-gradient(to right, #f44336, #ff9800, #4caf50);
             outline: none;
             margin: 15px 0;
         }
@@ -154,33 +300,41 @@
         #inclinationSlider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: var(--primary-color);
+            background: white;
             cursor: pointer;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         #inclinationSlider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            background: var(--primary-color);
+            background: white;
             cursor: pointer;
-            border: none;
+            border: 3px solid var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         #paceList {
-            background-color: white;
+            background: white;
             border-radius: var(--border-radius);
             padding: 20px;
             box-shadow: var(--box-shadow);
+            display: none;
+        }
+        
+        #paceList.active {
+            display: block;
         }
         
         #paceList h3 {
             margin-top: 0;
             color: var(--secondary-color);
-            border-bottom: 1px solid #eee;
+            border-bottom: 2px solid var(--accent-color);
             padding-bottom: 10px;
         }
         
@@ -188,15 +342,23 @@
             list-style-type: none;
             padding: 0;
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
         }
         
         #paceList li {
-            padding: 10px;
-            background-color: var(--light-color);
+            padding: 12px;
+            background: linear-gradient(135deg, var(--light-color), #fff);
             border-radius: var(--border-radius);
             font-weight: 500;
+            border-left: 3px solid var(--accent-color);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        
+        #paceList li:hover {
+            background: linear-gradient(135deg, #e9ecef, var(--light-color));
+            transform: translateY(-2px);
         }
         
         .modal {
@@ -212,20 +374,30 @@
             backdrop-filter: blur(5px);
         }
         
-        .modal-content {
-            background-color: white;
-            margin: 10% auto;
-            padding: 25px;
-            border-radius: var(--border-radius);
-            width: 80%;
-            max-width: 600px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            animation: modalFade 0.3s;
+        .modal.active {
+            display: block;
         }
         
-        @keyframes modalFade {
-            from {opacity: 0; transform: translateY(-30px);}
-            to {opacity: 1; transform: translateY(0);}
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
         
         .close {
@@ -238,254 +410,499 @@
         }
         
         .close:hover {
-            color: var(--dark-color);
+            color: var(--danger-color);
         }
         
-        #copyText {
+        textarea {
             width: 100%;
-            height: 200px;
-            margin: 15px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
+            height: 250px;
+            padding: 12px;
+            border: 2px solid #ddd;
             border-radius: var(--border-radius);
-            font-family: inherit;
-            resize: none;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
         }
         
-        .two-columns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .info-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #2196F3;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .loader {
+            border: 4px solid var(--light-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+        }
+
+        .tooltip.active {
+            display: block;
+        }
+
+        .chart-legend {
+            display: flex;
             gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
         }
-        
-        @media (max-width: 768px) {
-            .two-columns {
-                grid-template-columns: 1fr;
-            }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-box {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
-    <h1>Calcolatore di Passo Avanzato</h1>
+    <h1>🏃 Calcolatore di Passo Avanzato v2</h1>
     
-    <div class="container">
-        <div class="two-columns">
+    <div class="main-grid">
+        <!-- SEZIONE SINISTRA: INPUT -->
+        <div class="container">
+            <h2>Parametri Allenamento</h2>
+            
             <div class="form-group">
-                <label for="workoutName">Nome Allenamento:</label>
-                <input type="text" id="workoutName" placeholder="Inserisci il nome dell'allenamento">
+                <label for="workoutName">Nome Allenamento</label>
+                <input type="text" id="workoutName" placeholder="Es: Sessione velocità" value="Allenamento">
             </div>
+            
             <div class="form-group">
-                <label for="workoutDateTime">Data e Ora:</label>
+                <label for="workoutDateTime">Data e Ora</label>
                 <input type="datetime-local" id="workoutDateTime">
             </div>
-        </div>
-        
-        <div class="two-columns">
+            
             <div class="form-group">
-                <label for="distance">Distanza (km):</label>
-                <input type="number" id="distance" min="0.1" step="0.1" value="10">
+                <label for="distance">Distanza (km)</label>
+                <input type="number" id="distance" placeholder="10" value="10" min="0.1" step="0.1">
             </div>
+            
             <div class="form-group">
-                <label for="time">Tempo totale (minuti):</label>
-                <input type="number" id="time" min="1" value="50">
+                <label for="time">Tempo Totale (minuti)</label>
+                <input type="number" id="time" placeholder="60" value="60" min="1" step="1">
+            </div>
+            
+            <button class="btn-primary" onclick="calculatePace()">📊 Calcola Passo</button>
+            
+            <div id="result"></div>
+            
+            <!-- Stats Box -->
+            <div id="statsBox" class="stats-grid hidden">
+                <div class="stat-box">
+                    <div class="stat-label">Velocità Media</div>
+                    <div class="stat-value" id="avgSpeed">0 km/h</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Ritmo Min/Max</div>
+                    <div class="stat-value" id="paceRange">0:00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Pendenza</div>
+                    <div class="stat-value" id="inclinationDisplay">0%</div>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-copy" id="copyButton" onclick="openCopyDialog()" style="display: none; flex: 1;">📋 Copia Risultati</button>
+                <button class="btn-reset" onclick="resetForm()" style="flex: 1;">🔄 Ripristina</button>
             </div>
         </div>
         
-        <div class="two-columns">
-            <button onclick="calculatePace()">Calcola Passo</button>
-            <button id="copyButton" onclick="openCopyDialog()" style="display: none;">Copia Dati</button>
-        </div>
-    </div>
-    
-    <div id="result" style="display: none;"></div>
-    
-    <canvas id="chart"></canvas>
-    
-    <div class="container">
-        <label>Inclinazione:</label>
-        <div class="inclination-controls">
-            <button onclick="adjustInclination(-0.1)">-</button>
-            <input type="number" id="inclinationInput" min="-10" max="10" value="0" step="0.1" oninput="updateInclinationFromInput()">
-            <button onclick="adjustInclination(0.1)">+</button>
-            <span id="inclinationValue">0%</span>
-        </div>
-        <input type="range" id="inclinationSlider" min="-10" max="10" value="0" step="0.1" oninput="updateInclination()">
-        
-        <div class="two-columns">
+        <!-- SEZIONE DESTRA: CONTROLLI GRAFICO -->
+        <div class="container">
+            <h2>Controlli Grafico</h2>
+            
+            <div class="info-box">
+                <span class="info-icon">ℹ</span>
+                <strong>Interazioni:</strong> Hover sul grafico per dettagli, clicca sui km per evidenziare
+            </div>
+            
             <div class="form-group">
-                <label for="chartType">Tipo di grafico:</label>
+                <label for="chartType">Tipo di Grafico</label>
                 <select id="chartType" onchange="updateChart()">
-                    <option value="line">Linea</option>
-                    <option value="bar">Barre</option>
+                    <option value="line">📈 Linea</option>
+                    <option value="bar">📊 Barre</option>
+                    <option value="radar">🎯 Radar</option>
+                    <option value="area">🌊 Area</option>
                 </select>
             </div>
+            
             <div class="form-group">
-                <label for="chartColor">Colore del grafico:</label>
-                <input type="color" id="chartColor" value="#4361ee" onchange="updateChart()">
+                <label for="chartColor">Colore Grafico</label>
+                <select id="chartColor" onchange="updateChart()">
+                    <option value="#4361ee">🔵 Blu</option>
+                    <option value="#f44336">🔴 Rosso</option>
+                    <option value="#4caf50">🟢 Verde</option>
+                    <option value="#ff9800">🟠 Arancione</option>
+                    <option value="#9c27b0">🟣 Viola</option>
+                    <option value="#00bcd4">🔷 Ciano</option>
+                </select>
             </div>
+            
+            <div class="form-group">
+                <label>Inclinazione</label>
+                <div class="inclination-controls">
+                    <button onclick="adjustInclination(-1)">−</button>
+                    <input type="number" id="inclinationInput" value="0" min="-10" max="10" onchange="updateInclinationFromInput()">
+                    <span>%</span>
+                    <span id="inclinationValue">0%</span>
+                    <button onclick="adjustInclination(1)">+</button>
+                </div>
+                <input type="range" id="inclinationSlider" min="-10" max="10" value="0" onchange="updateInclination()">
+            </div>
+            
+            <div class="form-group">
+                <label for="smoothness">Levigatezza Curva</label>
+                <select id="smoothness" onchange="updateChart()">
+                    <option value="0">Lineare</option>
+                    <option value="0.2" selected>Normale</option>
+                    <option value="0.4">Morbida</option>
+                    <option value="0.6">Molto Morbida</option>
+                </select>
+            </div>
+            
+            <button class="btn-secondary" onclick="exportAsImage()" style="width: 100%; margin-top: 20px;">📥 Scarica Grafico</button>
         </div>
     </div>
     
+    <!-- SEZIONE GRAFICO -->
+    <div class="container">
+        <div class="chart-container">
+            <canvas id="chart"></canvas>
+            <div class="tooltip" id="tooltip"></div>
+        </div>
+        <div class="chart-legend" id="chartLegend"></div>
+    </div>
+    
+    <!-- LISTA DETTAGLIATA PASSO -->
     <div id="paceList"></div>
-
+    
+    <!-- MODAL COPIA -->
     <div id="copyModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Copia Dati</h2>
+            <span class="close" onclick="closeCopyDialog()">&times;</span>
+            <h2>Risultati Allenamento</h2>
             <textarea id="copyText" readonly></textarea>
-            <button onclick="copyToClipboard()">Copia negli Appunti</button>
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn-copy" onclick="copyToClipboard()" style="flex: 1;">📋 Copia negli Appunti</button>
+                <button class="btn-secondary" onclick="closeCopyDialog()" style="flex: 1;">❌ Chiudi</button>
+            </div>
         </div>
     </div>
 
     <script>
-        let chart;
-        let distance, time;
+        // ==================== GESTIONE STATO ====================
+        const AppState = {
+            distance: 10,
+            time: 60,
+            averagePace: 0,
+            chart: null,
+            currentPaces: [],
+            selectedKm: null,
+            
+            init() {
+                this.setDefaultDateTime();
+            },
+            
+            setDefaultDateTime() {
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                document.getElementById('workoutDateTime').value = now.toISOString().slice(0, 16);
+            }
+        };
 
-        // Imposta la data e l'ora corrente nel campo datetime-local
-        document.getElementById('workoutDateTime').value = new Date().toISOString().slice(0, 16);
+        // ==================== CALCOLI ====================
+        const PaceCalculator = {
+            calculateAveragePace(distance, time) {
+                return time / distance;
+            },
+            
+            calculatePaces(inclinationPercent, totalKm, averagePace, time) {
+                const paces = [];
+                const inclinationFactor = 1 + (inclinationPercent / 100);
+                
+                for (let i = 0; i < totalKm; i++) {
+                    const factor = Math.pow(inclinationFactor, i - (totalKm - 1) / 2);
+                    paces.push(averagePace * factor);
+                }
+                
+                const totalCalculatedTime = paces.reduce((sum, pace) => sum + pace, 0);
+                const normalizationFactor = time / totalCalculatedTime;
+                return paces.map(pace => pace * normalizationFactor);
+            },
+            
+            formatPace(pace) {
+                const minutes = Math.floor(pace);
+                const seconds = Math.round((pace - minutes) * 60);
+                return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            },
+            
+            getStats(paces, distance, time) {
+                const minPace = Math.min(...paces);
+                const maxPace = Math.max(...paces);
+                const avgSpeed = (distance / time * 60).toFixed(2);
+                
+                return {
+                    avgSpeed: avgSpeed,
+                    minPace: this.formatPace(minPace),
+                    maxPace: this.formatPace(maxPace),
+                    paceRange: `${this.formatPace(minPace)} - ${this.formatPace(maxPace)}`
+                };
+            }
+        };
 
-        function calculatePace() {
-            distance = parseFloat(document.getElementById('distance').value);
-            time = parseInt(document.getElementById('time').value);
+        // ==================== UI UPDATES ====================
+        const UIManager = {
+            showResult(text) {
+                const resultElement = document.getElementById('result');
+                resultElement.innerHTML = `✅ ${text}`;
+                resultElement.style.display = 'block';
+            },
+            
+            updateStats(stats, inclination) {
+                const statsBox = document.getElementById('statsBox');
+                document.getElementById('avgSpeed').textContent = `${stats.avgSpeed} km/h`;
+                document.getElementById('paceRange').textContent = stats.paceRange;
+                document.getElementById('inclinationDisplay').textContent = `${inclination}%`;
+                statsBox.classList.remove('hidden');
+            },
+            
+            updatePaceList(paces) {
+                const paceList = document.getElementById('paceList');
+                let html = '<h3>🏃 Passo per Chilometro:</h3><ul>';
+                
+                paces.forEach((pace, index) => {
+                    const formattedPace = PaceCalculator.formatPace(pace);
+                    html += `<li onclick="highlightKm(${index})" data-km="${index}">Km ${index + 1}: ${formattedPace}</li>`;
+                });
+                
+                html += '</ul>';
+                paceList.innerHTML = html;
+                paceList.classList.add('active');
+            }
+        };
+
+        // ==================== VALIDAZIONE ====================
+        function validateInput() {
+            const distance = parseFloat(document.getElementById('distance').value);
+            const time = parseInt(document.getElementById('time').value);
             
             if (isNaN(distance) || isNaN(time) || distance <= 0 || time <= 0) {
-                alert('Per favore, inserisci valori validi per distanza e tempo.');
-                return;
+                alert('❌ Inserisci valori validi per distanza e tempo.');
+                return false;
             }
+            return true;
+        }
 
-            const averagePace = time / distance;
-            const paceMinutes = Math.floor(averagePace);
-            const paceSeconds = Math.round((averagePace - paceMinutes) * 60);
-
-            const resultElement = document.getElementById('result');
-            resultElement.innerHTML = `Passo medio: ${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} min/km`;
-            resultElement.style.display = 'block';
+        // ==================== CALCOLO PRINCIPALE ====================
+        function calculatePace() {
+            if (!validateInput()) return;
             
+            AppState.distance = parseFloat(document.getElementById('distance').value);
+            AppState.time = parseInt(document.getElementById('time').value);
+            AppState.averagePace = PaceCalculator.calculateAveragePace(AppState.distance, AppState.time);
+            
+            const paceMinutes = Math.floor(AppState.averagePace);
+            const paceSeconds = Math.round((AppState.averagePace - paceMinutes) * 60);
+            
+            UIManager.showResult(`Passo medio: ${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} min/km`);
             document.getElementById('copyButton').style.display = 'block';
-
+            
             updateChart();
         }
 
+        // ==================== GRAFICO ====================
         function updateChart() {
+            if (AppState.averagePace === 0) return;
+            
             const inclinationPercent = parseFloat(document.getElementById('inclinationSlider').value);
-            const totalKm = Math.ceil(distance);
+            const totalKm = Math.ceil(AppState.distance);
             const chartType = document.getElementById('chartType').value;
             const chartColor = document.getElementById('chartColor').value;
+            const smoothness = parseFloat(document.getElementById('smoothness').value);
             
-            const paces = calculatePaces(inclinationPercent, totalKm);
-
-            if (chart) {
-                chart.destroy();
+            AppState.currentPaces = PaceCalculator.calculatePaces(
+                inclinationPercent,
+                totalKm,
+                AppState.averagePace,
+                AppState.time
+            );
+            
+            const stats = PaceCalculator.getStats(AppState.currentPaces, AppState.distance, AppState.time);
+            UIManager.updateStats(stats, inclinationPercent);
+            UIManager.updatePaceList(AppState.currentPaces);
+            
+            if (AppState.chart) {
+                AppState.chart.destroy();
             }
-
-            Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-            Chart.defaults.font.size = 14;
-
-            chart = new Chart(document.getElementById('chart'), {
-                type: chartType,
+            
+            const ctx = document.getElementById('chart').getContext('2d');
+            const labels = Array.from({length: totalKm}, (_, i) => `Km ${i + 1}`);
+            
+            // Configurazione dataset in base al tipo di grafico
+            let datasets = [{
+                label: 'Passo (min/km)',
+                data: AppState.currentPaces,
+                borderColor: chartColor,
+                backgroundColor: chartType === 'area' ? chartColor + '40' : (chartType === 'bar' ? chartColor : chartColor + '20'),
+                borderWidth: chartType === 'bar' ? 0 : 3,
+                pointBackgroundColor: chartColor,
+                pointRadius: 5,
+                pointHoverRadius: 8,
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                tension: smoothness,
+                fill: chartType === 'area' || chartType === 'radar',
+            }];
+            
+            AppState.chart = new Chart(ctx, {
+                type: chartType === 'area' ? 'line' : chartType,
                 data: {
-                    labels: Array.from({length: totalKm}, (_, i) => `Km ${i+1}`),
-                    datasets: [{
-                        label: 'Passo (minuti/km)',
-                        data: paces,
-                        borderColor: chartColor,
-                        backgroundColor: chartColor + '40',
-                        borderWidth: 3,
-                        pointBackgroundColor: chartColor,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        tension: 0.2
-                    }]
+                    labels: labels,
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     plugins: {
                         legend: {
-                            labels: {
-                                font: {
-                                    weight: 'bold'
-                                }
-                            }
+                            display: false,
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
                             padding: 12,
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 14
-                            },
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
                             callbacks: {
                                 label: function(context) {
                                     const value = context.parsed.y;
-                                    const minutes = Math.floor(value);
-                                    const seconds = Math.round((value - minutes) * 60);
-                                    return `Passo: ${minutes}:${seconds.toString().padStart(2, '0')} min/km`;
+                                    return `Passo: ${PaceCalculator.formatPace(value)} min/km`;
+                                },
+                                afterLabel: function(context) {
+                                    const kmIndex = context.dataIndex;
+                                    const totalPaceTime = AppState.currentPaces[kmIndex];
+                                    return `Tempo km: ${totalPaceTime.toFixed(2)} min`;
                                 }
                             }
                         }
                     },
-                    scales: {
+                    scales: chartType === 'radar' ? {} : {
                         y: {
-                            title: {
-                                display: true,
-                                text: 'Passo (minuti/km)',
-                                font: {
-                                    weight: 'bold',
-                                    size: 14
-                                },
-                                padding: {top: 10, bottom: 10}
-                            },
+                            title: { display: true, text: 'Passo (min/km)', font: { weight: 'bold', size: 13 } },
                             ticks: {
                                 callback: function(value) {
-                                    const minutes = Math.floor(value);
-                                    const seconds = Math.round((value - minutes) * 60);
-                                    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                                },
-                                padding: 8
+                                    return PaceCalculator.formatPace(value);
+                                }
                             },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
                         x: {
-                            title: {
-                                display: true,
-                                text: 'Distanza (km)',
-                                font: {
-                                    weight: 'bold',
-                                    size: 14
-                                },
-                                padding: {top: 10, bottom: 10}
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
+                            title: { display: true, text: 'Distanza (km)', font: { weight: 'bold', size: 13 } },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         }
                     }
                 }
             });
-
-            updatePaceList(paces);
+            
+            updateChartLegend(chartColor);
         }
 
-        function calculatePaces(inclinationPercent, totalKm) {
-            const averagePace = time / distance;
-            const paces = [];
-            const inclinationFactor = 1 + (inclinationPercent / 100);
-
-            for (let i = 0; i < totalKm; i++) {
-                const factor = Math.pow(inclinationFactor, i - (totalKm - 1) / 2);
-                paces.push(averagePace * factor);
-            }
-
-            const totalCalculatedTime = paces.reduce((sum, pace) => sum + pace, 0);
-            const normalizationFactor = time / totalCalculatedTime;
-            return paces.map(pace => pace * normalizationFactor);
+        function updateChartLegend(color) {
+            const legend = document.getElementById('chartLegend');
+            const min = Math.min(...AppState.currentPaces);
+            const max = Math.max(...AppState.currentPaces);
+            const avg = AppState.currentPaces.reduce((a, b) => a + b) / AppState.currentPaces.length;
+            
+            legend.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-box" style="background: ${color}66;"></div>
+                    <span>Min: ${PaceCalculator.formatPace(min)}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: ${color};"></div>
+                    <span>Media: ${PaceCalculator.formatPace(avg)}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background: ${color}cc;"></div>
+                    <span>Max: ${PaceCalculator.formatPace(max)}</span>
+                </div>
+            `;
         }
 
+        // ==================== INTERAZIONI GRAFICO ====================
+        function highlightKm(kmIndex) {
+            const paceItems = document.querySelectorAll('#paceList li');
+            paceItems.forEach((item, index) => {
+                item.style.opacity = (index === kmIndex) ? '1' : '0.5';
+                item.style.transform = (index === kmIndex) ? 'scale(1.05)' : 'scale(1)';
+            });
+            
+            AppState.selectedKm = kmIndex;
+            showKmTooltip(kmIndex);
+        }
+
+        function showKmTooltip(kmIndex) {
+            const tooltip = document.getElementById('tooltip');
+            const pace = AppState.currentPaces[kmIndex];
+            const formattedPace = PaceCalculator.formatPace(pace);
+            tooltip.innerHTML = `<strong>Km ${kmIndex + 1}</strong><br>Passo: ${formattedPace}`;
+            tooltip.classList.add('active');
+        }
+
+        // ==================== INCLINAZIONE ====================
         function updateInclination() {
             const inclinationPercent = document.getElementById('inclinationSlider').value;
             document.getElementById('inclinationInput').value = inclinationPercent;
@@ -506,22 +923,11 @@
             updateInclinationFromInput();
         }
 
-        function updatePaceList(paces) {
-            const paceList = document.getElementById('paceList');
-            paceList.innerHTML = '<h3>Passo per chilometro:</h3><ul>';
-            
-            paces.forEach((pace, index) => {
-                const paceMinutes = Math.floor(pace);
-                const paceSeconds = Math.round((pace - paceMinutes) * 60);
-                paceList.innerHTML += `<li>Km ${index+1}: ${paceMinutes}:${paceSeconds.toString().padStart(2, '0')} min/km</li>`;
-            });
-            
-            paceList.innerHTML += '</ul>';
-        }
-
+        // ==================== EXPORT ====================
         function openCopyDialog() {
             const modal = document.getElementById('copyModal');
             const copyText = document.getElementById('copyText');
+            
             const workoutName = document.getElementById('workoutName').value || "Allenamento senza nome";
             const workoutDateTime = document.getElementById('workoutDateTime').value;
             const distance = document.getElementById('distance').value;
@@ -529,7 +935,7 @@
             const inclination = document.getElementById('inclinationSlider').value;
             const result = document.getElementById('result').textContent;
             const paceList = document.getElementById('paceList').innerText;
-
+            
             const formattedDateTime = new Date(workoutDateTime).toLocaleString('it-IT', {
                 year: 'numeric',
                 month: '2-digit',
@@ -537,31 +943,96 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
+            
+            const textToCopy = `╔════════════════════════════════════════╗
+║  CALCOLATORE DI PASSO AVANZATO v2.0  ║
+╚════════════════════════════════════════╝
 
-            const textToCopy = `Nome Allenamento: ${workoutName}\nData e Ora: ${formattedDateTime}\n\nCalcolatore di Passo Avanzato\n\nDistanza: ${distance} km\nTempo totale: ${time} min\nInclinazione: ${inclination}%\n\n${result}\n\n${paceList}`;
+🏃 ${workoutName}
+📅 ${formattedDateTime}
+
+📊 PARAMETRI ALLENAMENTO
+${'-'.repeat(40)}
+Distanza: ${distance} km
+Tempo totale: ${time} min
+Inclinazione: ${inclination}%
+
+📈 RISULTATI
+${'-'.repeat(40)}
+${result}
+
+${paceList}
+
+${'-'.repeat(40)}
+Generato da: Calcolatore di Passo v2.0`;
             
             copyText.value = textToCopy;
-            modal.style.display = 'block';
+            modal.classList.add('active');
         }
 
-        function copyToClipboard() {
+        function closeCopyDialog() {
+            document.getElementById('copyModal').classList.remove('active');
+        }
+
+        async function copyToClipboard() {
             const copyText = document.getElementById('copyText');
-            copyText.select();
-            document.execCommand('copy');
-            alert('Dati copiati negli appunti!');
-        }
-
-        // Chiusura del modal
-        const modal = document.getElementById('copyModal');
-        const span = document.getElementsByClassName('close')[0];
-        span.onclick = function() {
-            modal.style.display = 'none';
-        }
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = 'none';
+            
+            try {
+                await navigator.clipboard.writeText(copyText.value);
+                alert('✅ Dati copiati negli appunti!');
+            } catch (err) {
+                copyText.select();
+                document.execCommand('copy');
+                alert('✅ Dati copiati negli appunti!');
             }
         }
+
+        function exportAsImage() {
+            const canvas = document.getElementById('chart');
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `passo-grafico-${new Date().getTime()}.png`;
+            link.click();
+        }
+
+        // ==================== RESET ====================
+        function resetForm() {
+            document.getElementById('distance').value = 10;
+            document.getElementById('time').value = 60;
+            document.getElementById('inclinationSlider').value = 0;
+            document.getElementById('inclinationInput').value = 0;
+            document.getElementById('inclinationValue').textContent = '0%';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('copyButton').style.display = 'none';
+            document.getElementById('paceList').classList.remove('active');
+            document.getElementById('statsBox').classList.add('hidden');
+            
+            AppState.averagePace = 0;
+            AppState.currentPaces = [];
+            
+            if (AppState.chart) {
+                AppState.chart.destroy();
+                AppState.chart = null;
+            }
+        }
+
+        // ==================== EVENTS ====================
+        document.getElementById('copyModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeCopyDialog();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const tooltip = document.getElementById('tooltip');
+            if (!e.target.closest('#paceList')) {
+                tooltip.classList.remove('active');
+            }
+        });
+
+        // ==================== INIT ====================
+        AppState.init();
     </script>
 </body>
 </html>
