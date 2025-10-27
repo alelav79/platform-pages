@@ -524,6 +524,98 @@
             cursor: grabbing;
         }
 
+        .quick-edit-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            backdrop-filter: blur(2px);
+        }
+
+        .quick-edit-overlay.active {
+            display: flex;
+        }
+
+        .quick-edit-box {
+            background: white;
+            border: 3px solid var(--primary-color);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            min-width: 350px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .quick-edit-box h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .quick-edit-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quick-edit-input-group input {
+            width: 70px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .quick-edit-separator {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0 5px;
+        }
+
+        .quick-edit-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .quick-edit-buttons button {
+            min-width: 100px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-edit-save {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .quick-edit-save:hover {
+            background: #388e3c;
+            transform: translateY(-2px);
+        }
+
+        .quick-edit-cancel {
+            background: #f0f0f0;
+            color: var(--dark-color);
+        }
+
+        .quick-edit-cancel:hover {
+            background: #e0e0e0;
+        }
+
         .edit-km-modal {
             position: absolute;
             background: white;
@@ -610,7 +702,10 @@
             
             <div class="info-box">
                 <span class="info-icon">ℹ</span>
-                <strong>Interazioni:</strong> 🖱️ <strong>Clicca + Trascina</strong> per modificare • 🔧 <strong>Doppio-click</strong> per editare • 📋 <strong>Trascinabile lista</strong>
+                <strong>Interazioni Disponibili:</strong>
+                <br>📊 <strong>Grafico:</strong> Clicca + Trascina punto | Doppio-click per editare
+                <br>📋 <strong>Lista:</strong> Click per evidenziare | Doppio-click per editare | Trascina per riordinare
+                <br>⌨️ <strong>Shortcuts:</strong> Enter=Salva | Esc=Annulla | Tab=Passa campo
             </div>
             
             <div class="form-group">
@@ -723,6 +818,22 @@
         </div>
     </div>
 
+    <!-- QUICK EDIT OVERLAY -->
+    <div id="quickEditOverlay" class="quick-edit-overlay">
+        <div class="quick-edit-box">
+            <h3>Modifica Passo - <span id="quickEditKmLabel">Km</span></h3>
+            <div class="quick-edit-input-group">
+                <input type="number" id="quickEditMinutes" min="0" max="59" value="0" placeholder="min">
+                <span class="quick-edit-separator">:</span>
+                <input type="number" id="quickEditSeconds" min="0" max="59" value="0" placeholder="sec">
+            </div>
+            <div class="quick-edit-buttons">
+                <button class="quick-edit-save" onclick="saveQuickEdit()">✅ Salva</button>
+                <button class="quick-edit-cancel" onclick="closeQuickEdit()">❌ Annulla</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== GESTIONE STATO ====================
         const AppState = {
@@ -806,12 +917,25 @@
                 
                 paces.forEach((pace, index) => {
                     const formattedPace = PaceCalculator.formatPace(pace);
-                    html += `<li onclick="highlightKm(${index})" data-km="${index}">Km ${index + 1}: ${formattedPace}</li>`;
+                    html += `<li onclick="highlightKm(${index})" ondblclick="openEditKmModal(${index})" data-km="${index}" style="cursor: pointer; position: relative; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Km ${index + 1}: <strong>${formattedPace}</strong></span>
+                        <span style="font-size: 0.8rem; color: #999; opacity: 0; transition: opacity 0.3s;">✏️</span>
+                    </li>`;
                 });
                 
                 html += '</ul>';
                 paceList.innerHTML = html;
                 paceList.classList.add('active');
+                
+                // Aggiungere hover effect ai li
+                document.querySelectorAll('#paceList li').forEach(li => {
+                    li.addEventListener('mouseenter', function() {
+                        this.querySelector('span:last-child').style.opacity = '1';
+                    });
+                    li.addEventListener('mouseleave', function() {
+                        this.querySelector('span:last-child').style.opacity = '0';
+                    });
+                });
             }
         };
 
@@ -1189,6 +1313,66 @@
             const paceMinutes = Math.floor(currentPace);
             const paceSeconds = Math.round((currentPace - paceMinutes) * 60);
             
+            const overlay = document.getElementById('quickEditOverlay');
+            const minutesInput = document.getElementById('quickEditMinutes');
+            const secondsInput = document.getElementById('quickEditSeconds');
+            const kmLabel = document.getElementById('quickEditKmLabel');
+            
+            kmLabel.textContent = `Km ${kmIndex + 1}`;
+            minutesInput.value = paceMinutes;
+            secondsInput.value = paceSeconds;
+            
+            // Salva l'indice nel overlay per usarlo quando salvi
+            overlay.dataset.kmIndex = kmIndex;
+            overlay.classList.add('active');
+            
+            // Focus sul campo minuti per comodità
+            minutesInput.focus();
+            minutesInput.select();
+        }
+
+        function closeQuickEdit() {
+            document.getElementById('quickEditOverlay').classList.remove('active');
+        }
+
+        function saveQuickEdit() {
+            const overlay = document.getElementById('quickEditOverlay');
+            const kmIndex = parseInt(overlay.dataset.kmIndex);
+            const minutes = parseInt(document.getElementById('quickEditMinutes').value) || 0;
+            const seconds = parseInt(document.getElementById('quickEditSeconds').value) || 0;
+            
+            if (minutes < 0 || seconds < 0 || seconds >= 60) {
+                alert('❌ Inserisci valori validi (minuti >= 0, secondi 0-59)');
+                return;
+            }
+            
+            const newPace = minutes + (seconds / 60);
+            
+            if (newPace <= 0) {
+                alert('❌ Il passo deve essere positivo');
+                return;
+            }
+            
+            AppState.currentPaces[kmIndex] = newPace;
+            
+            // Normalizza per mantenere il tempo totale
+            const totalCalculatedTime = AppState.currentPaces.reduce((sum, pace) => sum + pace, 0);
+            const normalizationFactor = AppState.time / totalCalculatedTime;
+            AppState.currentPaces = AppState.currentPaces.map(pace => pace * normalizationFactor);
+            
+            GraphicInteraction.updateChartData();
+            UIManager.updatePaceList(AppState.currentPaces);
+            GraphicInteraction.updateStats();
+            
+            closeQuickEdit();
+        }
+
+        // Funzioni vecchie mantienle per compatibilità
+        function openEditKmModalOld(kmIndex) {
+            const currentPace = AppState.currentPaces[kmIndex];
+            const paceMinutes = Math.floor(currentPace);
+            const paceSeconds = Math.round((currentPace - paceMinutes) * 60);
+            
             const modal = document.getElementById('editKmModal');
             const minutesInput = document.getElementById('editKmMinutes');
             const secondsInput = document.getElementById('editKmSeconds');
@@ -1247,9 +1431,34 @@
 
         // Enter key per salvare nel modal
         document.addEventListener('keydown', (e) => {
+            const quickEditOverlay = document.getElementById('quickEditOverlay');
             const modal = document.getElementById('editKmModal');
-            if (modal && modal.classList.contains('active') && e.key === 'Enter') {
-                saveEditKmModal();
+            
+            if (quickEditOverlay && quickEditOverlay.classList.contains('active')) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveQuickEdit();
+                } else if (e.key === 'Escape') {
+                    closeQuickEdit();
+                } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const minutesInput = document.getElementById('quickEditMinutes');
+                    const secondsInput = document.getElementById('quickEditSeconds');
+                    if (document.activeElement === minutesInput) {
+                        secondsInput.focus();
+                        secondsInput.select();
+                    } else {
+                        minutesInput.focus();
+                        minutesInput.select();
+                    }
+                }
+            } else if (modal && modal.classList.contains('active')) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveEditKmModal();
+                } else if (e.key === 'Escape') {
+                    closeEditKmModal();
+                }
             }
         });
 
