@@ -610,7 +610,7 @@
             
             <div class="info-box">
                 <span class="info-icon">ℹ</span>
-                <strong>Interazioni:</strong> 🖱️ Trascina i punti nel grafico • 📋 Trascina gli elementi della lista • 🖐️ Clicca sui km per evidenziare • ⚙️ Modifica manualmente i valori
+                <strong>Interazioni:</strong> 🖱️ <strong>Clicca + Trascina</strong> per modificare • 🔧 <strong>Doppio-click</strong> per editare • 📋 <strong>Trascinabile lista</strong>
             </div>
             
             <div class="form-group">
@@ -682,6 +682,43 @@
             <div class="btn-group" style="margin-top: 20px;">
                 <button class="btn-copy" onclick="copyToClipboard()" style="flex: 1;">📋 Copia negli Appunti</button>
                 <button class="btn-secondary" onclick="closeCopyDialog()" style="flex: 1;">❌ Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT KM -->
+    <div id="editKmModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditKmModal()">&times;</span>
+            <h2>Modifica Passo - <span id="editKmLabel">Km</span></h2>
+            
+            <div class="info-box" style="margin-bottom: 20px;">
+                <span class="info-icon">ℹ</span>
+                Inserisci il passo desiderato in minuti e secondi
+            </div>
+            
+            <div class="form-group">
+                <label>Passo (min:sec)</label>
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: end;">
+                    <div>
+                        <label for="editKmMinutes" style="font-size: 0.9rem; margin-bottom: 5px;">Minuti</label>
+                        <input type="number" id="editKmMinutes" min="0" max="59" value="0">
+                    </div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary-color); text-align: center;">:</div>
+                    <div>
+                        <label for="editKmSeconds" style="font-size: 0.9rem; margin-bottom: 5px;">Secondi</label>
+                        <input type="number" id="editKmSeconds" min="0" max="59" value="0">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label style="color: #666; font-size: 0.9rem; font-weight: 400;">Passo attuale: <span id="currentPaceDisplay" style="color: var(--primary-color); font-weight: 600;">0:00</span></label>
+            </div>
+            
+            <div class="btn-group" style="margin-top: 25px;">
+                <button class="btn-primary" onclick="saveEditKmModal()" style="flex: 1; background-color: var(--success-color);">✅ Salva</button>
+                <button class="btn-reset" onclick="closeEditKmModal()" style="flex: 1;">❌ Annulla</button>
             </div>
         </div>
     </div>
@@ -937,6 +974,7 @@
             isDragging: false,
             draggedKm: null,
             dragStartY: 0,
+            selectedKmInChart: null,
             
             init() {
                 const canvas = document.getElementById('chart');
@@ -944,6 +982,7 @@
                 canvas.addEventListener('mousemove', (e) => this.onCanvasMouseMove(e));
                 canvas.addEventListener('mouseup', (e) => this.onCanvasMouseUp(e));
                 canvas.addEventListener('mouseleave', (e) => this.onCanvasMouseLeave(e));
+                canvas.addEventListener('dblclick', (e) => this.onCanvasDoubleClick(e));
             },
             
             onCanvasMouseDown(e) {
@@ -956,13 +995,17 @@
                 const kmIndex = Math.round(dataX);
                 
                 if (kmIndex >= 0 && kmIndex < AppState.currentPaces.length) {
-                    this.isDragging = true;
-                    this.draggedKm = kmIndex;
-                    this.dragStartY = canvasPosition.y;
-                    this.originalPace = AppState.currentPaces[kmIndex];
-                    
-                    highlightKm(kmIndex);
-                    this.showDragIndicator(kmIndex);
+                    // Se il pulsante è il sinistro (0)
+                    if (e.button === 0) {
+                        // Controlla se è doppio click (delegato a onCanvasDoubleClick)
+                        this.isDragging = true;
+                        this.draggedKm = kmIndex;
+                        this.dragStartY = canvasPosition.y;
+                        this.originalPace = AppState.currentPaces[kmIndex];
+                        
+                        this.selectKmInChart(kmIndex);
+                        this.showDragIndicator(kmIndex);
+                    }
                 }
             },
             
@@ -992,6 +1035,38 @@
                     this.isDragging = false;
                     this.removeDragIndicator();
                     this.recalculateAndNormalize();
+                }
+            },
+            
+            onCanvasDoubleClick(e) {
+                if (!AppState.chart) return;
+                
+                const canvasPosition = Chart.helpers.getRelativePosition(e, AppState.chart);
+                const dataX = AppState.chart.scales.x.getValueForPixel(canvasPosition.x);
+                const kmIndex = Math.round(dataX);
+                
+                if (kmIndex >= 0 && kmIndex < AppState.currentPaces.length) {
+                    e.preventDefault();
+                    this.isDragging = false;
+                    openEditKmModal(kmIndex);
+                }
+            },
+            
+            selectKmInChart(kmIndex) {
+                this.selectedKmInChart = kmIndex;
+                highlightKm(kmIndex);
+                
+                // Aggiorna lo stile del dataset per evidenziare il punto
+                if (AppState.chart) {
+                    const pointRadius = new Array(AppState.currentPaces.length).fill(5);
+                    pointRadius[kmIndex] = 10;
+                    
+                    const pointBorderWidth = new Array(AppState.currentPaces.length).fill(2);
+                    pointBorderWidth[kmIndex] = 4;
+                    
+                    AppState.chart.data.datasets[0].pointRadius = pointRadius;
+                    AppState.chart.data.datasets[0].pointBorderWidth = pointBorderWidth;
+                    AppState.chart.update('none');
                 }
             },
             
@@ -1034,7 +1109,7 @@
             showDragValue(kmIndex, pace) {
                 const tooltip = document.getElementById('tooltip');
                 const formattedPace = PaceCalculator.formatPace(pace);
-                tooltip.innerHTML = `<strong>Km ${kmIndex + 1}</strong><br>Passo: ${formattedPace}<br><em>Trascinando...</em>`;
+                tooltip.innerHTML = `<strong>Km ${kmIndex + 1}</strong><br>Passo: ${formattedPace}<br><em>Trascinando... Rilascia o Doppio-click per editare</em>`;
                 tooltip.classList.add('active');
             }
         };
@@ -1107,6 +1182,76 @@
             GraphicInteraction.updateChartData();
             UIManager.updatePaceList(AppState.currentPaces);
         }
+
+        // ==================== EDIT KM MODAL ====================
+        function openEditKmModal(kmIndex) {
+            const currentPace = AppState.currentPaces[kmIndex];
+            const paceMinutes = Math.floor(currentPace);
+            const paceSeconds = Math.round((currentPace - paceMinutes) * 60);
+            
+            const modal = document.getElementById('editKmModal');
+            const minutesInput = document.getElementById('editKmMinutes');
+            const secondsInput = document.getElementById('editKmSeconds');
+            const kmLabel = document.getElementById('editKmLabel');
+            const currentPaceDisplay = document.getElementById('currentPaceDisplay');
+            
+            kmLabel.textContent = `Km ${kmIndex + 1}`;
+            minutesInput.value = paceMinutes;
+            secondsInput.value = paceSeconds;
+            currentPaceDisplay.textContent = PaceCalculator.formatPace(currentPace);
+            
+            // Salva l'indice nel modal per usarlo quando salvi
+            modal.dataset.kmIndex = kmIndex;
+            modal.classList.add('active');
+            
+            // Focus sul campo minuti per comodità
+            minutesInput.focus();
+            minutesInput.select();
+        }
+
+        function closeEditKmModal() {
+            document.getElementById('editKmModal').classList.remove('active');
+        }
+
+        function saveEditKmModal() {
+            const modal = document.getElementById('editKmModal');
+            const kmIndex = parseInt(modal.dataset.kmIndex);
+            const minutes = parseInt(document.getElementById('editKmMinutes').value) || 0;
+            const seconds = parseInt(document.getElementById('editKmSeconds').value) || 0;
+            
+            if (minutes < 0 || seconds < 0 || seconds >= 60) {
+                alert('❌ Inserisci valori validi (minuti >= 0, secondi 0-59)');
+                return;
+            }
+            
+            const newPace = minutes + (seconds / 60);
+            
+            if (newPace <= 0) {
+                alert('❌ Il passo deve essere positivo');
+                return;
+            }
+            
+            AppState.currentPaces[kmIndex] = newPace;
+            
+            // Normalizza per mantenere il tempo totale
+            const totalCalculatedTime = AppState.currentPaces.reduce((sum, pace) => sum + pace, 0);
+            const normalizationFactor = AppState.time / totalCalculatedTime;
+            AppState.currentPaces = AppState.currentPaces.map(pace => pace * normalizationFactor);
+            
+            GraphicInteraction.updateChartData();
+            UIManager.updatePaceList(AppState.currentPaces);
+            GraphicInteraction.updateStats();
+            
+            closeEditKmModal();
+        }
+
+        // Enter key per salvare nel modal
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('editKmModal');
+            if (modal && modal.classList.contains('active') && e.key === 'Enter') {
+                saveEditKmModal();
+            }
+        });
 
         // ==================== INCLINAZIONE ====================
         function updateInclination() {
