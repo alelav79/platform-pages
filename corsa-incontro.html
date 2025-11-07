@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcolatore Incontro Corsa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        input[type="number"], input[type="time"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        input[type="number"]:focus, input[type="time"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 18px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .calculate-btn:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 25px;
+            font-size: 1.3em;
+            font-weight: 600;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .details {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #666;
+        }
+        
+        .meeting-point {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .pace-info {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .pace-info small {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .runner-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="runner-icon">🏃‍♂️</span>Incontro al Ritorno</h1>
+        
+        <div class="input-group">
+            <label for="startTime">Orario partenza amici:</label>
+            <input type="time" id="startTime" value="19:00">
+        </div>
+        
+        <div class="input-group">
+            <label for="friendsDistance">Distanza totale amici (km):</label>
+            <input type="number" id="friendsDistance" value="10" step="0.1" min="0.1">
+        </div>
+        
+        <div class="input-group">
+            <label for="friendsTime">Tempo totale amici (minuti):</label>
+            <input type="number" id="friendsTime" value="90" min="1">
+        </div>
+        
+        <div class="input-group">
+            <label for="myDistanceOut">La mia distanza andata (km):</label>
+            <input type="number" id="myDistanceOut" value="3.5" step="0.1" min="0.1">
+        </div>
+        
+        <div class="input-group">
+            <label for="myPace">Il mio ritmo (min/km):</label>
+            <input type="number" id="myPace" value="5" step="0.1" min="1">
+        </div>
+        
+        <button class="calculate-btn" onclick="calculate()">
+            🏃‍♂️ Calcola quando partire
+        </button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        function calculate() {
+            // Ottieni i valori di input
+            const startTime = document.getElementById('startTime').value;
+            const friendsDistance = parseFloat(document.getElementById('friendsDistance').value);
+            const friendsTime = parseFloat(document.getElementById('friendsTime').value);
+            const myDistanceOut = parseFloat(document.getElementById('myDistanceOut').value);
+            const myPace = parseFloat(document.getElementById('myPace').value);
+            
+            // Calcola le velocità
+            const friendsSpeed = friendsDistance / friendsTime; // km/min
+            const mySpeed = 1 / myPace; // km/min (da min/km a km/min)
+            
+            // Gli amici fanno andata (5km in 45min) e ritorno (5km in 45min)
+            // Il tempo per arrivare al punto di svolta degli amici è 45 minuti
+            const friendsTurnTime = friendsTime / 2;
+            
+            // Il mio tempo per andare e tornare dal mio punto di svolta
+            const myOutTime = myDistanceOut * myPace; // tempo per andare
+            const myReturnTime = myDistanceOut * myPace; // tempo per tornare
+            
+            // Quando sono al mio punto di svolta (dopo myOutTime minuti dalla mia partenza)
+            // devo calcolare dove saranno gli amici e quando ci incontreremo
+            
+            // Algoritmo: troviamo il punto e tempo di incontro
+            // Sia t il tempo dall'inizio della mia corsa
+            // Sia x la distanza dal punto di partenza comune
+            
+            // Per t > myOutTime (quando sto tornando):
+            // La mia posizione: myDistanceOut - mySpeed * (t - myOutTime)
+            // La posizione degli amici dipende da quando sono partiti
+            
+            // Proviamo diversi ritardi per trovare quando ci incontriamo
+            let bestDelay = 0;
+            let bestMeetingTime = 0;
+            let bestMeetingDistance = 0;
+            
+            // Prova ritardi da 0 a 120 minuti
+            for (let delay = 0; delay <= 120; delay += 0.1) {
+                // Tempo totale dall'inizio della mia corsa quando ci incontriamo
+                for (let t = myOutTime; t <= myOutTime + myReturnTime; t += 0.1) {
+                    // La mia posizione (tornando indietro)
+                    const myPosition = myDistanceOut - mySpeed * (t - myOutTime);
+                    
+                    // Tempo degli amici dalla loro partenza
+                    const friendsElapsed = t - delay;
+                    
+                    if (friendsElapsed <= 0) continue;
+                    
+                    let friendsPosition;
+                    if (friendsElapsed <= friendsTurnTime) {
+                        // Gli amici stanno andando (primi 45 minuti)
+                        friendsPosition = friendsSpeed * friendsElapsed;
+                    } else {
+                        // Gli amici stanno tornando
+                        const returnTime = friendsElapsed - friendsTurnTime;
+                        friendsPosition = (friendsDistance / 2) - friendsSpeed * returnTime;
+                    }
+                    
+                    // Controlliamo se ci incontriamo (posizioni simili)
+                    if (Math.abs(myPosition - friendsPosition) < 0.05 && myPosition >= 0) {
+                        bestDelay = delay;
+                        bestMeetingTime = t;
+                        bestMeetingDistance = myPosition;
+                        break;
+                    }
+                }
+                if (bestDelay > 0) break;
+            }
+            
+            // Converti l'orario di partenza in minuti
+            const [hours, minutes] = startTime.split(':').map(Number);
+            const startMinutes = hours * 60 + minutes;
+            
+            // Calcola il mio orario di partenza
+            const myStartMinutes = startMinutes + bestDelay;
+            const myStartHours = Math.floor(myStartMinutes / 60);
+            const myStartMins = Math.round(myStartMinutes % 60);
+            
+            // Formatta l'orario
+            const myStartTime = `${myStartHours.toString().padStart(2, '0')}:${myStartMins.toString().padStart(2, '0')}`;
+            
+            // Calcola l'orario di incontro
+            const meetingMinutes = myStartMinutes + bestMeetingTime;
+            const meetingHours = Math.floor(meetingMinutes / 60);
+            const meetingMins = Math.round(meetingMinutes % 60);
+            const meetingTime = `${meetingHours.toString().padStart(2, '0')}:${meetingMins.toString().padStart(2, '0')}`;
+            
+            // Mostra il risultato
+            const resultDiv = document.getElementById('result');
+            
+            let resultText = `
+                <div class="runner-icon">⏰</div>
+                <strong>Devi partire alle: ${myStartTime}</strong>
+                <br><br>
+                <small>Ritardo di ${Math.round(bestDelay)} minuti dopo i tuoi amici</small>
+                
+                <div class="meeting-point">
+                    📍 Vi incontrerete alle ${meetingTime} a ${bestMeetingDistance.toFixed(1)} km dal punto di partenza<br>
+                    (Tu starai tornando dai tuoi ${myDistanceOut} km)
+                </div>
+                
+                <div class="pace-info">
+                    🏃‍♂️ <strong>Ritmo da tenere con gli amici:</strong><br>
+                    ${(friendsTime/friendsDistance).toFixed(1)} min/km (${((friendsDistance/friendsTime)*60).toFixed(1)} km/h)<br>
+                    <small>Dovrai ${myPace < (friendsTime/friendsDistance) ? 'rallentare' : 'accelerare'} di ${Math.abs(myPace - (friendsTime/friendsDistance)).toFixed(1)} min/km</small>
+                </div>
+                
+                <div class="details">
+                    <strong>Dettagli del calcolo:</strong><br>
+                    • Velocità amici: ${(friendsSpeed * 60).toFixed(2)} km/h (ritmo ${(friendsTime/friendsDistance).toFixed(1)} min/km)<br>
+                    • La tua velocità: ${(mySpeed * 60).toFixed(2)} km/h (ritmo ${myPace} min/km)<br>
+                    • Il tuo tempo andata: ${myOutTime.toFixed(1)} min<br>
+                    • Tempo totale fino all'incontro: ${bestMeetingTime.toFixed(1)} min dalla tua partenza<br>
+                    • Distanza punto d'incontro: ${bestMeetingDistance.toFixed(1)} km dal punto di partenza<br>
+                    • Distanza rimanente con gli amici: ${bestMeetingDistance.toFixed(1)} km al loro ritmo
+                </div>
+            `;
+            
+            if (bestDelay === 0 && bestMeetingTime === 0) {
+                resultText = `
+                    <div class="runner-icon">⚠️</div>
+                    <strong>Attenzione!</strong><br>
+                    Non riesco a trovare un punto di incontro con questi parametri.<br>
+                    Prova ad aggiustare la tua distanza o il ritmo.
+                `;
+            }
+            
+            resultDiv.innerHTML = resultText;
+            resultDiv.style.display = 'block';
+        }
+        
+        // Calcola automaticamente quando i valori cambiano
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                if (document.getElementById('result').style.display === 'block') {
+                    calculate();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
