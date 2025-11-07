@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>⚔️ Quest Arena</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a14;
+            color: #fff;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========== LOGIN SCREEN ========== */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a0a14 0%, #1a1a2e 100%);
+            text-align: center;
+        }
+
+        .login-content {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-screen h1 {
+            font-size: 3em;
+            margin-bottom: 5px;
+            color: #00ff88;
+            text-shadow: 0 0 20px #00ff88;
+        }
+
+        .login-screen p {
+            font-size: 0.95em;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 14px 16px;
+            border: 2px solid #00ff88;
+            background: rgba(0, 255, 136, 0.05);
+            color: #fff;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            background: rgba(0, 255, 136, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        button {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #00ff88, #00cc6f);
+            border: none;
+            color: #000;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        button:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .message {
+            background: rgba(0, 255, 136, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #00ff88;
+            font-size: 0.9em;
+        }
+
+        .message.error {
+            background: rgba(255, 50, 50, 0.15);
+            border-left-color: #ff3232;
+        }
+
+        /* ========== GAME SCREEN ========== */
+        .game-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: linear-gradient(180deg, #1a3a3a 0%, #0a1a2e 100%);
+        }
+
+        .game-screen.active {
+            display: block;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* ========== HUD OVERLAY ========== */
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 12px;
+        }
+
+        /* TOP BAR */
+        .hud-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.8em;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            align-items: center;
+        }
+
+        .stat-label {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #ffff00;
+            font-size: 1.1em;
+        }
+
+        .hp-bar {
+            width: 100%;
+            height: 10px;
+            background: #222;
+            border: 1px solid #00ff88;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00);
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        .session-box {
+            background: rgba(255, 200, 0, 0.15);
+            border: 2px solid #ffc800;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.75em;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .session-box code {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            word-break: break-all;
+            max-width: 100%;
+        }
+
+        .copy-btn {
+            background: rgba(255, 200, 0, 0.3);
+            border: 1px solid #ffc800;
+            color: #ffc800;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .copy-btn:active {
+            background: rgba(255, 200, 0, 0.5);
+        }
+
+        /* BOTTOM BAR */
+        .hud-bottom {
+            pointer-events: auto;
+        }
+
+        .nearby-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.75em;
+            margin-bottom: 12px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        .nearby-title {
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+
+        .player-entry {
+            background: rgba(0, 100, 255, 0.15);
+            padding: 6px 8px;
+            margin: 4px 0;
+            border-left: 3px solid #0064ff;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .player-entry.close {
+            background: rgba(0, 255, 136, 0.15);
+            border-left-color: #00ff88;
+        }
+
+        .player-name {
+            flex: 1;
+            font-weight: bold;
+        }
+
+        .player-dist {
+            color: #ffff00;
+            font-size: 0.8em;
+            margin-left: 8px;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .ctrl-btn {
+            padding: 10px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00ff88;
+            color: #00ff88;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85em;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .ctrl-btn:active {
+            background: rgba(0, 255, 136, 0.4);
+            transform: scale(0.98);
+        }
+
+        .ctrl-btn.exit {
+            background: rgba(255, 50, 50, 0.2);
+            border-color: #ff3232;
+            color: #ff3232;
+        }
+
+        .ctrl-btn.exit:active {
+            background: rgba(255, 50, 50, 0.4);
+        }
+
+        /* ========== MOBILE CONTROLS ========== */
+        /* Joystick Left */
+        .joystick-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 100, 255, 0.15);
+            border: 2px solid #0064ff;
+            border-radius: 50%;
+            touch-action: none;
+            pointer-events: auto;
+        }
+
+        .joystick-thumb {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #0064ff;
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px rgba(0, 100, 255, 0.8);
+            transition: all 0.1s;
+        }
+
+        /* Attack Button Right */
+        .attack-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 90px;
+            height: 90px;
+            background: rgba(255, 100, 50, 0.15);
+            border: 2px solid #ff6432;
+            border-radius: 50%;
+            touch-action: none;
+            pointer-events: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            transition: all 0.1s;
+        }
+
+        .attack-btn.active {
+            background: rgba(255, 100, 50, 0.35);
+            box-shadow: 0 0 20px rgba(255, 100, 50, 0.8);
+            transform: scale(1.05);
+        }
+
+        .direction-indicator {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ffff00;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #ffff00;
+        }
+
+        /* ========== RADAR ========== */
+        .radar-container {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #0064ff;
+            border-radius: 50%;
+            pointer-events: none;
+            overflow: hidden;
+            box-shadow: inset 0 0 15px rgba(0, 100, 255, 0.2);
+        }
+
+        .radar-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle, rgba(0, 100, 255, 0.15) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .radar-center {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #00ff88;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 8px #00ff88;
+            z-index: 10;
+        }
+
+        .radar-player {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        .radar-player.ally {
+            background: rgba(0, 255, 136, 0.8);
+            border-color: #00ff88;
+        }
+
+        .radar-player.enemy {
+            background: rgba(255, 100, 50, 0.8);
+            border-color: #ff6432;
+        }
+
+        .radar-player.self {
+            background: #ffff00;
+            border-color: #ffff00;
+            width: 10px;
+            height: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .login-screen h1 {
+                font-size: 2.5em;
+            }
+
+            .joystick-container {
+                width: 80px;
+                height: 80px;
+                bottom: 15px;
+                left: 15px;
+            }
+
+            .joystick-thumb {
+                width: 32px;
+                height: 32px;
+            }
+
+            .attack-btn {
+                width: 80px;
+                height: 80px;
+                bottom: 15px;
+                right: 15px;
+                font-size: 2em;
+            }
+        }
+
+        @media (orientation: landscape) {
+            .hud-bottom {
+                display: none;
+            }
+
+            .nearby-box {
+                max-height: 80px;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ff88;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- LOGIN SCREEN -->
+        <div id="loginScreen" class="login-screen">
+            <div class="login-content">
+                <h1>⚔️</h1>
+                <h1 style="font-size: 2em; margin-top: -10px;">Quest Arena</h1>
+                <p>Multiplayer 2D Battle</p>
+                
+                <div class="input-group">
+                    <input type="text" id="playerName" placeholder="Il tuo nome" maxlength="20">
+                    <button onclick="loginPlayer()">🆕 Nuova Sessione</button>
+                </div>
+
+                <div class="input-group">
+                    <input type="text" id="sessionToken" placeholder="Incolla il codice qui">
+                    <button onclick="joinSession()">✅ Unisciti</button>
+                </div>
+
+                <div class="message" id="loginMessage" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- GAME SCREEN -->
+        <div id="gameScreen" class="game-screen">
+            <canvas id="gameCanvas"></canvas>
+
+            <!-- HUD -->
+            <div class="hud">
+                <!-- RADAR TOP-LEFT -->
+                <div class="radar-container" id="radar">
+                    <div class="radar-bg"></div>
+                    <div class="radar-center"></div>
+                </div>
+                <!-- TOP STATS -->
+                <div class="hud-top">
+                    <div class="stat-box">
+                        <div class="stat-row">
+                            <span class="stat-label">⚔️ Lvl</span>
+                            <span class="stat-value" id="hud-level">1</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">💎</span>
+                            <span class="stat-value" id="hud-score">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">🎯</span>
+                            <span class="stat-value" id="hud-kills">0</span>
+                        </div>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="hud-hp"></div>
+                        </div>
+                    </div>
+
+                    <div class="session-box">
+                        <strong>📋 SESIÓN</strong>
+                        <code id="hud-token">--</code>
+                        <button class="copy-btn" onclick="copyToken()">📋 Copiar</button>
+                    </div>
+                </div>
+
+                <!-- BOTTOM INFO & CONTROLS -->
+                <div class="hud-bottom">
+                    <div class="nearby-box">
+                        <div class="nearby-title">👥 Giocatori Vicini</div>
+                        <div id="nearby-list"></div>
+                    </div>
+
+                    <div class="control-buttons">
+                        <button class="ctrl-btn" onclick="toggleStats()">📊 Stats</button>
+                        <button class="ctrl-btn exit" onclick="leaveGame()">🚪 Esci</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JOYSTICK (LEFT) -->
+            <div class="joystick-container" id="joystickArea">
+                <div class="joystick-thumb" id="joystickThumb"></div>
+            </div>
+
+            <!-- ATTACK BUTTON (RIGHT) CON DIREZIONE -->
+            <div class="attack-btn" id="attackBtn">
+                <div class="direction-indicator" id="directionInd"></div>
+                ⚡
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ GAME ENGINE ============
+        class MultiplayerGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.setupCanvas();
+                this.initializeGame();
+                this.setupMobileControls();
+            }
+
+            setupCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                window.addEventListener('resize', () => this.setupCanvas());
+            }
+
+            initializeGame() {
+                this.gameWidth = 2000;
+                this.gameHeight = 1500;
+                this.camera = { x: 0, y: 0 };
+                
+                this.players = new Map();
+                this.enemies = [];
+                this.items = [];
+                this.projectiles = [];
+                
+                this.keys = {};
+                this.joystickInput = { x: 0, y: 0 };
+                this.attackAngle = 0;
+                this.attacking = false;
+
+                this.generateEnemies();
+                this.generateItems();
+                this.gameLoop();
+            }
+
+            setupMobileControls() {
+                const joystick = document.getElementById('joystickArea');
+                const joystickThumb = document.getElementById('joystickThumb');
+                const attackBtn = document.getElementById('attackBtn');
+                const directionInd = document.getElementById('directionInd');
+
+                let joystickActive = false;
+                let joystickStartX, joystickStartY;
+
+                joystick.addEventListener('touchstart', (e) => {
+                    joystickActive = true;
+                    joystickStartX = e.touches[0].clientX;
+                    joystickStartY = e.touches[0].clientY;
+                });
+
+                joystick.addEventListener('touchmove', (e) => {
+                    if (!joystickActive) return;
+                    const x = e.touches[0].clientX - joystickStartX;
+                    const y = e.touches[0].clientY - joystickStartY;
+                    const distance = Math.sqrt(x * x + y * y);
+                    const maxDistance = 40;
+
+                    if (distance > 0) {
+                        this.joystickInput.x = (x / distance) * Math.min(distance, maxDistance);
+                        this.joystickInput.y = (y / distance) * Math.min(distance, maxDistance);
+                        joystickThumb.style.transform = `translate(calc(-50% + ${this.joystickInput.x}px), calc(-50% + ${this.joystickInput.y}px))`;
+                    }
+                });
+
+                document.addEventListener('touchend', () => {
+                    joystickActive = false;
+                    this.joystickInput = { x: 0, y: 0 };
+                    joystickThumb.style.transform = `translate(-50%, -50%)`;
+                });
+
+                // ATTACK BUTTON - Targeting direzionale come Brawl Stars
+                let attackActive = false;
+                let attackStartX, attackStartY;
+
+                attackBtn.addEventListener('touchstart', (e) => {
+                    attackActive = true;
+                    attackStartX = e.touches[0].clientX;
+                    attackStartY = e.touches[0].clientY;
+                    attackBtn.classList.add('active');
+                });
+
+                attackBtn.addEventListener('touchmove', (e) => {
+                    if (!attackActive) return;
+                    
+                    const x = e.touches[0].clientX - attackStartX;
+                    const y = e.touches[0].clientY - attackStartY;
+                    const distance = Math.sqrt(x * x + y * y);
+
+                    if (distance > 0) {
+                        this.attackAngle = Math.atan2(y, x);
+                        
+                        // Mostra la direzione
+                        const angle = this.attackAngle;
+                        const radius = 30;
+                        const px = Math.cos(angle) * radius;
+                        const py = Math.sin(angle) * radius;
+                        directionInd.style.transform = `translate(calc(-50% + ${px}px), calc(-50% + ${py}px))`;
+                        
+                        if (distance > 15) {
+                            attackBtn.style.opacity = '0.7';
+                        }
+                    }
+                });
+
+                document.addEventListener('touchend', (e) => {
+                    if (attackActive) {
+                        attackActive = false;
+                        attackBtn.classList.remove('active');
+                        attackBtn.style.opacity = '1';
+                        directionInd.style.transform = `translate(-50%, -50%)`;
+                        this.handleAttack();
+                    }
+                });
+            }
+
+            generateEnemies() {
+                for (let i = 0; i < 15; i++) {
+                    this.enemies.push({
+                        x: Math.random() * this.gameWidth,
+                        y: Math.random() * this.gameHeight,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        radius: 12,
+                        hp: 30,
+                        maxHp: 30,
+                        color: ['#ff6b6b', '#ff8787', '#ff5252'][Math.floor(Math.random() * 3)]
+                    });
+                }
+            }
+
+            generateItems() {
+                const types = [
+                    { type: 'health', color: '#00ff88' },
+                    { type: 'score', color: '#ffff00' },
+                    { type: 'boost', color: '#00ccff' }
+                ];
+                for (let i = 0; i < 30; i++) {
+                    const item = types[Math.floor(Math.random() * types.length)];
+                    this.items.push({
+                        x: Math.random() * this.gameWidth,
+                        y: Math.random() * this.gameHeight,
+                        ...item,
+                        collected: false
+                    });
+                }
+            }
+
+            createPlayer(id, name, x, y) {
+                const colors = ['#ff6b9d', '#00d4ff', '#ffa502', '#00ff88', '#ff006e', '#8338ec'];
+                return {
+                    id, name, x, y,
+                    vx: 0, vy: 0,
+                    radius: 15,
+                    hp: 100, maxHp: 100,
+                    speed: 3,
+                    score: 0, kills: 0, level: 1,
+                    color: colors[id.charCodeAt(0) % colors.length],
+                    angle: 0, lastAttack: 0
+                };
+            }
+
+            updatePlayer(playerData) {
+                if (!this.players.has(playerData.id)) {
+                    this.players.set(playerData.id, this.createPlayer(playerData.id, playerData.name, playerData.x, playerData.y));
+                }
+                const player = this.players.get(playerData.id);
+                player.x = playerData.x;
+                player.y = playerData.y;
+                player.hp = playerData.hp;
+                player.score = playerData.score;
+                player.kills = playerData.kills;
+                player.level = playerData.level;
+            }
+
+            handleAttack() {
+                if (!this.players.has(this.playerId)) return;
+                const player = this.players.get(this.playerId);
+                const now = Date.now();
+                if (now - player.lastAttack < 300) return;
+                player.lastAttack = now;
+
+                // Spara nella direzione del targeting (attackAngle)
+                const angle = this.attackAngle || player.angle || 0;
+                for (let i = 0; i < 5; i++) {
+                    const spreadAngle = angle + (i - 2) * 0.25;
+                    this.projectiles.push({
+                        x: player.x + Math.cos(spreadAngle) * 20,
+                        y: player.y + Math.sin(spreadAngle) * 20,
+                        vx: Math.cos(spreadAngle) * 8,
+                        vy: Math.sin(spreadAngle) * 8,
+                        radius: 5,
+                        playerId: this.playerId
+                    });
+                }
+            }
+
+            updateLocalPlayer() {
+                if (!this.players.has(this.playerId)) return;
+                const player = this.players.get(this.playerId);
+
+                // Joystick movement
+                if (this.joystickInput.x !== 0 || this.joystickInput.y !== 0) {
+                    const len = Math.sqrt(this.joystickInput.x ** 2 + this.joystickInput.y ** 2);
+                    player.vx = (this.joystickInput.x / len) * player.speed;
+                    player.vy = (this.joystickInput.y / len) * player.speed;
+                } else {
+                    player.vx *= 0.9;
+                    player.vy *= 0.9;
+                }
+
+                player.x += player.vx;
+                player.y += player.vy;
+                player.x = Math.max(0, Math.min(this.gameWidth, player.x));
+                player.y = Math.max(0, Math.min(this.gameHeight, player.y));
+
+                // Collect items
+                for (let item of this.items) {
+                    if (!item.collected) {
+                        const dist = Math.hypot(player.x - item.x, player.y - item.y);
+                        if (dist < 30) {
+                            item.collected = true;
+                            if (item.type === 'health') player.hp = Math.min(player.maxHp, player.hp + 30);
+                            if (item.type === 'score') player.score += 50;
+                            if (item.type === 'boost') player.speed = 5;
+                        }
+                    }
+                }
+
+                this.camera.x = player.x - this.canvas.width / 2;
+                this.camera.y = player.y - this.canvas.height / 2;
+                this.camera.x = Math.max(0, Math.min(this.gameWidth - this.canvas.width, this.camera.x));
+                this.camera.y = Math.max(0, Math.min(this.gameHeight - this.canvas.height, this.camera.y));
+            }
+
+            updateEnemies() {
+                for (let enemy of this.enemies) {
+                    enemy.x += enemy.vx;
+                    enemy.y += enemy.vy;
+                    if (enemy.x < 0 || enemy.x > this.gameWidth) enemy.vx *= -1;
+                    if (enemy.y < 0 || enemy.y > this.gameHeight) enemy.vy *= -1;
+
+                    for (let player of this.players.values()) {
+                        const dx = player.x - enemy.x;
+                        const dy = player.y - enemy.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 200 && dist > 0) {
+                            enemy.vx += (dx / dist) * 0.2;
+                            enemy.vy += (dy / dist) * 0.2;
+                        }
+                        if (dist < 25) player.hp -= 0.5;
+                    }
+                }
+            }
+
+            updateProjectiles() {
+                for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                    const proj = this.projectiles[i];
+                    proj.x += proj.vx;
+                    proj.y += proj.vy;
+
+                    if (proj.x < 0 || proj.x > this.gameWidth || proj.y < 0 || proj.y > this.gameHeight) {
+                        this.projectiles.splice(i, 1);
+                        continue;
+                    }
+
+                    for (let j = this.enemies.length - 1; j >= 0; j--) {
+                        const enemy = this.enemies[j];
+                        const dist = Math.hypot(proj.x - enemy.x, proj.y - enemy.y);
+                        if (dist < proj.radius + enemy.radius) {
+                            enemy.hp -= 25;
+                            this.projectiles.splice(i, 1);
+                            if (enemy.hp <= 0) {
+                                const player = this.players.get(proj.playerId);
+                                if (player) {
+                                    player.score += 100;
+                                    player.kills += 1;
+                                    if (player.kills % 5 === 0) player.level += 1;
+                                }
+                                this.enemies.splice(j, 1);
+                                this.enemies.push(this.createEnemy());
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            createEnemy() {
+                return {
+                    x: Math.random() * this.gameWidth,
+                    y: Math.random() * this.gameHeight,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    radius: 12,
+                    hp: 30,
+                    maxHp: 30,
+                    color: ['#ff6b6b', '#ff8787', '#ff5252'][Math.floor(Math.random() * 3)]
+                };
+            }
+
+            draw() {
+                this.ctx.fillStyle = '#0a0a14';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.ctx.save();
+                this.ctx.translate(-this.camera.x, -this.camera.y);
+
+                // Enemies
+                for (let enemy of this.enemies) {
+                    this.drawEntity(enemy.x, enemy.y, enemy.radius, enemy.color, '👹');
+                    this.drawHealthBar(enemy.x, enemy.y - 20, enemy.hp, enemy.maxHp);
+                }
+
+                // Items
+                for (let item of this.items) {
+                    if (!item.collected) {
+                        const emoji = item.type === 'health' ? '❤️' : item.type === 'score' ? '⭐' : '⚡';
+                        this.drawEntity(item.x, item.y, 10, item.color, emoji);
+                    }
+                }
+
+                // Projectiles
+                for (let proj of this.projectiles) {
+                    this.ctx.fillStyle = '#ffff00';
+                    this.ctx.beginPath();
+                    this.ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+
+                // Players
+                for (let player of this.players.values()) {
+                    this.drawPlayer(player);
+                }
+
+                this.ctx.restore();
+            }
+
+            drawEntity(x, y, radius, color, emoji) {
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                this.ctx.font = `${radius * 2}px Arial`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(emoji, x, y);
+            }
+
+            drawPlayer(player) {
+                const isLocal = player.id === this.playerId;
+                this.drawEntity(player.x, player.y, player.radius, player.color, '⚔️');
+                if (isLocal) {
+                    this.ctx.strokeStyle = '#ffff00';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.arc(player.x, player.y, player.radius + 5, 0, Math.PI * 2);
+                    this.ctx.stroke();
+                }
+                this.drawHealthBar(player.x, player.y - 25, player.hp, player.maxHp);
+                this.drawPlayerName(player.x, player.y + 30, player.name, isLocal);
+            }
+
+            drawHealthBar(x, y, hp, maxHp) {
+                const barWidth = 40;
+                const barHeight = 6;
+                this.ctx.fillStyle = '#333';
+                this.ctx.fillRect(x - barWidth / 2, y, barWidth, barHeight);
+                const hpPercent = hp / maxHp;
+                this.ctx.fillStyle = hpPercent > 0.5 ? '#00ff88' : hpPercent > 0.25 ? '#ffff00' : '#ff4444';
+                this.ctx.fillRect(x - barWidth / 2, y, barWidth * hpPercent, barHeight);
+            }
+
+            drawPlayerName(x, y, name, isLocal) {
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillStyle = isLocal ? '#ffff00' : '#fff';
+                this.ctx.fillText(name, x, y);
+            }
+
+            gameLoop() {
+                this.updateLocalPlayer();
+                this.updateEnemies();
+                this.updateProjectiles();
+                this.updateHUD();
+                this.updateRadar();
+                this.draw();
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            updateHUD() {
+                if (!this.players.has(this.playerId)) return;
+                const player = this.players.get(this.playerId);
+
+                document.getElementById('hud-level').textContent = player.level;
+                document.getElementById('hud-score').textContent = player.score;
+                document.getElementById('hud-kills').textContent = player.kills;
+                document.getElementById('hud-hp').style.width = (player.hp / player.maxHp) * 100 + '%';
+
+                // Nearby players
+                const nearby = Array.from(this.players.values())
+                    .filter(p => p.id !== this.playerId)
+                    .map(p => ({
+                        ...p,
+                        dist: Math.hypot(p.x - player.x, p.y - player.y)
+                    }))
+                    .sort((a, b) => a.dist - b.dist)
+                    .slice(0, 5);
+
+                const list = document.getElementById('nearby-list');
+                list.innerHTML = '';
+                if (nearby.length === 0) {
+                    list.innerHTML = '<div style="color: #666; text-align: center; padding: 10px;">Nessuno vicino</div>';
+                } else {
+                    for (let p of nearby) {
+                        const div = document.createElement('div');
+                        div.className = 'player-entry' + (p.dist < 200 ? ' close' : '');
+                        div.innerHTML = `<span class="player-name">${p.name}</span><span class="player-dist">${Math.round(p.dist)}m</span>`;
+                        list.appendChild(div);
+                    }
+                }
+            }
+
+            updateRadar() {
+                if (!this.players.has(this.playerId)) return;
+                const player = this.players.get(this.playerId);
+                const radar = document.getElementById('radar');
+                const radarRadius = 60; // Metà del diametro del radar
+                const radarRange = 800; // Distanza visibile sul radar in pixel di gioco
+
+                // Rimuovi i vecchi marker
+                const oldMarkers = radar.querySelectorAll('.radar-player');
+                oldMarkers.forEach(m => m.remove());
+
+                // Aggiungi giocatori
+                for (let [id, p] of this.players) {
+                    const dx = p.x - player.x;
+                    const dy = p.y - player.y;
+                    const distance = Math.hypot(dx, dy);
+
+                    // Solo mostra se dentro il range
+                    if (distance > radarRange) continue;
+
+                    // Calcola posizione nel radar
+                    const angle = Math.atan2(dy, dx);
+                    const radarDist = (distance / radarRange) * radarRadius;
+                    const radarX = radarRadius + Math.cos(angle) * radarDist;
+                    const radarY = radarRadius + Math.sin(angle) * radarDist;
+
+                    const dot = document.createElement('div');
+                    dot.className = `radar-player ${id === this.playerId ? 'self' : 'ally'}`;
+                    dot.style.left = radarX + 'px';
+                    dot.style.top = radarY + 'px';
+                    radar.appendChild(dot);
+                }
+
+                // Aggiungi nemici
+                for (let enemy of this.enemies) {
+                    const dx = enemy.x - player.x;
+                    const dy = enemy.y - player.y;
+                    const distance = Math.hypot(dx, dy);
+
+                    if (distance > radarRange) continue;
+
+                    const angle = Math.atan2(dy, dx);
+                    const radarDist = (distance / radarRange) * radarRadius;
+                    const radarX = radarRadius + Math.cos(angle) * radarDist;
+                    const radarY = radarRadius + Math.sin(angle) * radarDist;
+
+                    const dot = document.createElement('div');
+                    dot.className = 'radar-player enemy';
+                    dot.style.left = radarX + 'px';
+                    dot.style.top = radarY + 'px';
+                    radar.appendChild(dot);
+                }
+            }
+        }
+
+        // ============ SESSION MANAGER ============
+        const game = new MultiplayerGame();
+
+        function generateToken() {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+
+        let sessionData = null;
+
+        function loginPlayer() {
+            const name = document.getElementById('playerName').value.trim();
+            if (!name) {
+                showMessage('Inserisci il tuo nome!', true);
+                return;
+            }
+
+            sessionData = {
+                sessionId: generateToken(),
+                timestamp: Date.now(),
+                players: {}
+            };
+
+            game.sessionToken = sessionData.sessionId;
+            game.playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            game.playerName = name;
+
+            const startX = Math.random() * 400 + 900;
+            const startY = Math.random() * 400 + 750;
+            const player = game.createPlayer(game.playerId, name, startX, startY);
+            game.players.set(game.playerId, player);
+
+            // Simula altri giocatori
+            for (let i = 0; i < Math.floor(Math.random() * 3) + 1; i++) {
+                const otherId = `player_other_${i}`;
+                const otherPlayer = game.createPlayer(otherId, `Giocatore ${i + 1}`, 
+                    Math.random() * 400 + 700, Math.random() * 400 + 650);
+                game.players.set(otherId, otherPlayer);
+            }
+
+            enterGame();
+        }
+
+        function joinSession() {
+            const token = document.getElementById('sessionToken').value.trim();
+            const name = document.getElementById('playerName').value.trim();
+
+            if (!name || !token) {
+                showMessage('Completa i campi!', true);
+                return;
+            }
+
+            game.sessionToken = token;
+            game.playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            game.playerName = name;
+
+            const startX = Math.random() * 400 + 900;
+            const startY = Math.random() * 400 + 750;
+            const player = game.createPlayer(game.playerId, name, startX, startY);
+            game.players.set(game.playerId, player);
+
+            for (let i = 0; i < Math.floor(Math.random() * 4) + 1; i++) {
+                const otherId = `player_other_${i}`;
+                const otherPlayer = game.createPlayer(otherId, `Giocatore ${i + 1}`,
+                    Math.random() * 400 + 700, Math.random() * 400 + 650);
+                game.players.set(otherId, otherPlayer);
+            }
+
+            enterGame();
+        }
+
+        function enterGame() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+            document.getElementById('hud-token').textContent = game.sessionToken;
+        }
+
+        function copyToken() {
+            navigator.clipboard.writeText(game.sessionToken);
+            alert('✅ Codice copiato! 📋');
+        }
+
+        function leaveGame() {
+            game.players.delete(game.playerId);
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('playerName').value = '';
+            document.getElementById('sessionToken').value = '';
+        }
+
+        function toggleStats() {
+            alert(`📊 STATISTICHE\n\nGiocatori: ${game.players.size}\nNemici: ${game.enemies.length}\nProiettili: ${game.projectiles.length}`);
+        }
+
+        function showMessage(text, isError = false) {
+            const msg = document.getElementById('loginMessage');
+            msg.textContent = text;
+            msg.className = 'message' + (isError ? ' error' : '');
+            msg.style.display = 'block';
+            setTimeout(() => msg.style.display = 'none', 3000);
+        }
+
+        // Enter key to login
+        document.getElementById('playerName').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loginPlayer();
+        });
+        document.getElementById('sessionToken').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinSession();
+        });
+    </script>
+</body>
+</html>
