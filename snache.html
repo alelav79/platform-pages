@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐍 Snake Emoji Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 28px;
+            color: #333;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .settings {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 2px solid #e9ecef;
+        }
+
+        .setting-group {
+            margin-bottom: 16px;
+        }
+
+        .setting-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .emoji-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .emoji-btn {
+            width: 44px;
+            height: 44px;
+            font-size: 24px;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emoji-btn:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+
+        .emoji-btn.selected {
+            border-color: #667eea;
+            background: #e7f0ff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .color-mode-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .color-mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .color-mode-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .color-picker-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .color-input {
+            width: 50px;
+            height: 40px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .color-input-text {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .gradient-preview {
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+            width: 100%;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: #f0f7ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .score-display {
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .game-canvas {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 3px solid #333;
+            border-radius: 12px;
+            background: #1a1a1a;
+            display: block;
+            margin-bottom: 16px;
+            cursor: none;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+
+        .btn-start {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 16px;
+            padding: 14px;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-start:active {
+            transform: translateY(0);
+        }
+
+        .btn-start:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-direction {
+            background: #667eea;
+            color: white;
+            font-size: 20px;
+            aspect-ratio: 1;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-direction:active {
+            background: #764ba2;
+        }
+
+        .btn-direction:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn-direction.up {
+            grid-column: 2;
+        }
+
+        .btn-direction.left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .btn-direction.down {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .btn-direction.right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .result {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+            text-align: center;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .result-score {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .share-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .share-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .share-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .share-btn:active {
+            transform: scale(0.95);
+        }
+
+        .keyboard-info {
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 16px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .game-canvas {
+                border-width: 2px;
+            }
+
+            .btn {
+                font-size: 12px;
+            }
+        }
+
+        @media (min-width: 601px) {
+            .keyboard-info {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐍 Snake Emoji</h1>
+        <p class="subtitle">Personalizza il tuo serpente e gioca!</p>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label class="setting-label">Testa del Serpente</label>
+                <div class="emoji-selector">
+                    <button class="emoji-btn selected" data-emoji="😘">😘</button>
+                    <button class="emoji-btn" data-emoji="❤️">❤️</button>
+                    <button class="emoji-btn" data-emoji="🐒">🐒</button>
+                    <button class="emoji-btn" data-emoji="😴">😴</button>
+                    <button class="emoji-btn" data-emoji="😉">😉</button>
+                    <button class="emoji-btn" data-emoji="😅">😅</button>
+                    <button class="emoji-btn" data-emoji="🐱">🐱</button>
+                    <button class="emoji-btn" data-emoji="🥺">🥺</button>
+                    <button class="emoji-btn" data-emoji="🌟">🌟</button>
+                    <button class="emoji-btn" data-emoji="💩">💩</button>
+                    <button class="emoji-btn" data-emoji="🤡">🤡</button>
+                    <button class="emoji-btn" data-emoji="😎">😎</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Colore del Corpo</label>
+                <div class="color-mode-selector">
+                    <button class="color-mode-btn active" data-mode="solid">Tinta Unita</button>
+                    <button class="color-mode-btn" data-mode="gradient">Gradiente</button>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <div id="solid-mode">
+                    <label class="setting-label">Seleziona Colore</label>
+                    <div class="color-picker-group">
+                        <input type="color" class="color-input" id="solidColor" value="#00ff00">
+                        <input type="text" class="color-input-text" id="solidColorHex" value="#00ff00">
+                    </div>
+                </div>
+                <div id="gradient-mode" style="display: none;">
+                    <label class="setting-label">Colore Inizio</label>
+                    <div class="color-picker-group">
+                        <input type="color" class="color-input" id="gradientStart" value="#ff0000">
+                        <input type="text" class="color-input-text" id="gradientStartHex" value="#ff0000">
+                    </div>
+                    <label class="setting-label" style="margin-top: 12px;">Colore Fine</label>
+                    <div class="color-picker-group">
+                        <input type="color" class="color-input" id="gradientEnd" value="#00ff00">
+                        <input type="text" class="color-input-text" id="gradientEndHex" value="#00ff00">
+                    </div>
+                    <label class="setting-label" style="margin-top: 12px;">Anteprima</label>
+                    <div id="gradientPreview" class="gradient-preview"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-info">
+            <div class="score-display">Punteggio: <span id="score">0</span></div>
+            <div class="score-display">Cibo: <span id="food">🍎</span></div>
+        </div>
+
+        <canvas id="gameCanvas" class="game-canvas"></canvas>
+
+        <div class="result" id="result">
+            <div class="result-title">🎮 Gioco Terminato!</div>
+            <div class="result-score" id="finalScore">0</div>
+            <div class="share-btns">
+                <button class="share-btn" id="copyBtn">📋 Copia</button>
+                <button class="share-btn" id="whatsappBtn">💬 WhatsApp</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn">▶ Avvia Gioco</button>
+            <button class="btn btn-direction up" id="upBtn" title="Su / ↑">⬆️</button>
+            <button class="btn btn-direction left" id="leftBtn" title="Sinistra / ←">⬅️</button>
+            <button class="btn btn-direction down" id="downBtn" title="Giù / ↓">⬇️</button>
+            <button class="btn btn-direction right" id="rightBtn" title="Destra / →">➡️</button>
+        </div>
+
+        <div class="keyboard-info">
+            💡 Usa frecce del tastiera o bottoni per controllare il serpente
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const GRID_SIZE = 20;
+        const CELL_SIZE = 15;
+        const GAME_SPEED = 80;
+        let selectedEmoji = '😘';
+        let colorMode = 'solid';
+        let solidColor = '#00ff00';
+        let gradientStart = '#ff0000';
+        let gradientEnd = '#00ff00';
+
+        // Game state
+        let snake = [];
+        let food = {};
+        let direction = { x: 1, y: 0 };
+        let nextDirection = { x: 1, y: 0 };
+        let score = 0;
+        let gameRunning = false;
+        let gameLoop = null;
+
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const resultDiv = document.getElementById('result');
+        const finalScoreDiv = document.getElementById('finalScore');
+
+        // Responsive canvas sizing
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth - 6, 400);
+            canvas.width = size;
+            canvas.height = size;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Emoji selection
+        document.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedEmoji = btn.dataset.emoji;
+            });
+        });
+
+        // Color mode switching
+        document.querySelectorAll('.color-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                colorMode = btn.dataset.mode;
+                document.getElementById('solid-mode').style.display = colorMode === 'solid' ? 'block' : 'none';
+                document.getElementById('gradient-mode').style.display = colorMode === 'gradient' ? 'block' : 'none';
+                updatePreview();
+            });
+        });
+
+        // Solid color picker
+        const solidColorInput = document.getElementById('solidColor');
+        const solidColorHex = document.getElementById('solidColorHex');
+        solidColorInput.addEventListener('input', (e) => {
+            solidColor = e.target.value;
+            solidColorHex.value = solidColor;
+        });
+        solidColorHex.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                solidColor = e.target.value;
+                solidColorInput.value = solidColor;
+            }
+        });
+
+        // Gradient color pickers
+        const gradientStartInput = document.getElementById('gradientStart');
+        const gradientStartHex = document.getElementById('gradientStartHex');
+        const gradientEndInput = document.getElementById('gradientEnd');
+        const gradientEndHex = document.getElementById('gradientEndHex');
+
+        gradientStartInput.addEventListener('input', (e) => {
+            gradientStart = e.target.value;
+            gradientStartHex.value = gradientStart;
+            updatePreview();
+        });
+        gradientStartHex.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                gradientStart = e.target.value;
+                gradientStartInput.value = gradientStart;
+                updatePreview();
+            }
+        });
+
+        gradientEndInput.addEventListener('input', (e) => {
+            gradientEnd = e.target.value;
+            gradientEndHex.value = gradientEnd;
+            updatePreview();
+        });
+        gradientEndHex.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                gradientEnd = e.target.value;
+                gradientEndInput.value = gradientEnd;
+                updatePreview();
+            }
+        });
+
+        function updatePreview() {
+            if (colorMode === 'gradient') {
+                const preview = document.getElementById('gradientPreview');
+                preview.style.background = `linear-gradient(135deg, ${gradientStart}, ${gradientEnd})`;
+            }
+        }
+
+        updatePreview();
+
+        // Game functions
+        function initGame() {
+            snake = [{ x: GRID_SIZE / 2, y: GRID_SIZE / 2 }];
+            direction = { x: 1, y: 0 };
+            nextDirection = { x: 1, y: 0 };
+            score = 0;
+            generateFood();
+            updateScore();
+            resultDiv.classList.remove('show');
+        }
+
+        function generateFood() {
+            let validPosition = false;
+            while (!validPosition) {
+                food = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+                validPosition = !snake.some(segment => segment.x === food.x && segment.y === food.y);
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        function getBodyColor(index, total) {
+            if (colorMode === 'solid') {
+                return solidColor;
+            } else {
+                // Gradient based on snake segment position
+                const ratio = index / total;
+                return interpolateColor(gradientStart, gradientEnd, ratio);
+            }
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            const c1 = parseInt(color1.substring(1), 16);
+            const c2 = parseInt(color2.substring(1), 16);
+
+            const r1 = (c1 >> 16) & 255;
+            const g1 = (c1 >> 8) & 255;
+            const b1 = c1 & 255;
+
+            const r2 = (c2 >> 16) & 255;
+            const g2 = (c2 >> 8) & 255;
+            const b2 = c2 & 255;
+
+            const r = Math.round(r1 + (r2 - r1) * factor);
+            const g = Math.round(g1 + (g2 - g1) * factor);
+            const b = Math.round(b1 + (b2 - b1) * factor);
+
+            return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw grid
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                const pos = (canvas.width / GRID_SIZE) * i;
+                ctx.beginPath();
+                ctx.moveTo(pos, 0);
+                ctx.lineTo(pos, canvas.height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, pos);
+                ctx.lineTo(canvas.width, pos);
+                ctx.stroke();
+            }
+
+            // Draw snake
+            snake.forEach((segment, index) => {
+                const x = (segment.x * canvas.width) / GRID_SIZE;
+                const y = (segment.y * canvas.height) / GRID_SIZE;
+                const size = (canvas.width / GRID_SIZE) * 0.9;
+
+                if (index === 0) {
+                    // Head with emoji
+                    ctx.font = `${size}px Arial`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(selectedEmoji, x + size / 2, y + size / 2);
+                } else {
+                    // Body
+                    const color = getBodyColor(index, snake.length);
+                    ctx.fillStyle = color;
+                    ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+                }
+            });
+
+            // Draw food
+            const fx = (food.x * canvas.width) / GRID_SIZE;
+            const fy = (food.y * canvas.height) / GRID_SIZE;
+            const size = (canvas.width / GRID_SIZE) * 0.9;
+            ctx.font = `${size}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🍎', fx + size / 2, fy + size / 2);
+        }
+
+        function updateGame() {
+            if (!gameRunning) return;
+
+            direction = nextDirection;
+
+            // Calculate new head position
+            const newHead = {
+                x: (snake[0].x + direction.x + GRID_SIZE) % GRID_SIZE,
+                y: (snake[0].y + direction.y + GRID_SIZE) % GRID_SIZE
+            };
+
+            // Check collision with self
+            if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+                endGame();
+                return;
+            }
+
+            snake.unshift(newHead);
+
+            // Check food collision
+            if (newHead.x === food.x && newHead.y === food.y) {
+                score += 10;
+                updateScore();
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function startGame() {
+            if (gameRunning) {
+                gameRunning = false;
+                clearInterval(gameLoop);
+                startBtn.textContent = '▶ Avvia Gioco';
+                document.querySelectorAll('.btn-direction').forEach(btn => btn.disabled = true);
+            } else {
+                initGame();
+                gameRunning = true;
+                startBtn.textContent = '⏸ Pausa';
+                document.querySelectorAll('.btn-direction').forEach(btn => btn.disabled = false);
+                gameLoop = setInterval(updateGame, GAME_SPEED);
+                draw();
+            }
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            startBtn.textContent = '▶ Avvia Gioco';
+            document.querySelectorAll('.btn-direction').forEach(btn => btn.disabled = true);
+
+            finalScoreDiv.textContent = `Punteggio: ${score} 🎯`;
+            resultDiv.classList.add('show');
+        }
+
+        function getShareMessage() {
+            return `🐍 Ho segnato ${score} punti a Snake Emoji! 🎮\n\nTesta: ${selectedEmoji}\nColore: ${colorMode === 'solid' ? solidColor : gradientStart + ' → ' + gradientEnd}\n\nProva anche tu: https://snake-emoji.game`;
+        }
+
+        // Share buttons
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const message = getShareMessage();
+            navigator.clipboard.writeText(message).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const original = btn.textContent;
+                btn.textContent = '✓ Copiato!';
+                setTimeout(() => {
+                    btn.textContent = original;
+                }, 2000);
+            });
+        });
+
+        document.getElementById('whatsappBtn').addEventListener('click', () => {
+            const message = encodeURIComponent(getShareMessage());
+            window.open(`https://wa.me/?text=${message}`, '_blank');
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameRunning) {
+                switch (e.key) {
+                    case 'ArrowUp':
+                        if (direction.y === 0) nextDirection = { x: 0, y: -1 };
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        if (direction.y === 0) nextDirection = { x: 0, y: 1 };
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        if (direction.x === 0) nextDirection = { x: -1, y: 0 };
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        if (direction.x === 0) nextDirection = { x: 1, y: 0 };
+                        e.preventDefault();
+                        break;
+                }
+            }
+        });
+
+        // Button controls
+        document.getElementById('upBtn').addEventListener('click', () => {
+            if (gameRunning && direction.y === 0) nextDirection = { x: 0, y: -1 };
+        });
+        document.getElementById('downBtn').addEventListener('click', () => {
+            if (gameRunning && direction.y === 0) nextDirection = { x: 0, y: 1 };
+        });
+        document.getElementById('leftBtn').addEventListener('click', () => {
+            if (gameRunning && direction.x === 0) nextDirection = { x: -1, y: 0 };
+        });
+        document.getElementById('rightBtn').addEventListener('click', () => {
+            if (gameRunning && direction.x === 0) nextDirection = { x: 1, y: 0 };
+        });
+
+        // Start button
+        startBtn.addEventListener('click', startGame);
+
+        // Initialize
+        draw();
+    </script>
+</body>
+</html>
