@@ -190,6 +190,9 @@
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin-bottom: 16px;
+            max-width: 200px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .btn {
@@ -402,8 +405,8 @@
             <div class="setting-group">
                 <label class="setting-label">⚡ Velocità del Gioco</label>
                 <div style="display: flex; gap: 12px; align-items: center;">
-                    <input type="range" id="speedSlider" min="30" max="150" value="80" style="flex: 1; cursor: pointer; height: 6px;">
-                    <span id="speedLabel" style="font-weight: 600; color: #667eea; min-width: 40px; text-align: center; font-size: 14px;">80</span>
+                    <input type="range" id="speedSlider" min="30" max="150" value="120" style="flex: 1; cursor: pointer; height: 6px;">
+                    <span id="speedLabel" style="font-weight: 600; color: #667eea; min-width: 40px; text-align: center; font-size: 14px;">50%</span>
                 </div>
                 <div style="font-size: 11px; color: #999; margin-top: 6px; text-align: center;">
                     <span id="speedDesc">Normale</span>
@@ -468,7 +471,7 @@
         // Configuration
         const GRID_SIZE = 20;
         const CELL_SIZE = 15;
-        let GAME_SPEED = 80;
+        let GAME_SPEED = 120;
         let selectedEmoji = '😘';
         let colorMode = 'solid';
         let solidColor = '#00ff00';
@@ -508,22 +511,23 @@
         const speedDesc = document.getElementById('speedDesc');
 
         speedSlider.addEventListener('input', (e) => {
-            GAME_SPEED = parseInt(e.target.value);
-            speedLabel.textContent = GAME_SPEED;
+            const sliderValue = parseInt(e.target.value);
+            GAME_SPEED = sliderValue;
+            const percentage = Math.round(((150 - sliderValue) / 120) * 100);
+            speedLabel.textContent = percentage + '%';
             
-            if (GAME_SPEED <= 50) {
-                speedDesc.textContent = '🐢 Lentissimo';
-            } else if (GAME_SPEED <= 70) {
-                speedDesc.textContent = '🐇 Lento';
-            } else if (GAME_SPEED <= 90) {
-                speedDesc.textContent = '⚡ Normale';
-            } else if (GAME_SPEED <= 120) {
-                speedDesc.textContent = '🚀 Veloce';
-            } else {
+            if (percentage <= 20) {
                 speedDesc.textContent = '💥 Pazzesco!';
+            } else if (percentage <= 40) {
+                speedDesc.textContent = '🚀 Veloce';
+            } else if (percentage <= 70) {
+                speedDesc.textContent = '⚡ Normale';
+            } else if (percentage <= 85) {
+                speedDesc.textContent = '🐇 Lento';
+            } else {
+                speedDesc.textContent = '🐢 Lentissimo';
             }
 
-            // Se il gioco è in esecuzione, aggiorna l'intervallo
             if (gameRunning) {
                 clearInterval(gameLoop);
                 gameLoop = setInterval(updateGame, GAME_SPEED);
@@ -636,7 +640,6 @@
             if (colorMode === 'solid') {
                 return solidColor;
             } else {
-                // Gradient based on snake segment position
                 const ratio = index / total;
                 return interpolateColor(gradientStart, gradientEnd, ratio);
             }
@@ -662,11 +665,9 @@
         }
 
         function draw() {
-            // Clear canvas
             ctx.fillStyle = '#1a1a1a';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Draw grid
             ctx.strokeStyle = '#333';
             ctx.lineWidth = 0.5;
             for (let i = 0; i <= GRID_SIZE; i++) {
@@ -682,20 +683,17 @@
                 ctx.stroke();
             }
 
-            // Draw snake
             snake.forEach((segment, index) => {
                 const x = (segment.x * canvas.width) / GRID_SIZE;
                 const y = (segment.y * canvas.height) / GRID_SIZE;
                 const size = (canvas.width / GRID_SIZE) * 0.9;
 
                 if (index === 0) {
-                    // Head with emoji
                     ctx.font = `${size}px Arial`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(selectedEmoji, x + size / 2, y + size / 2);
                 } else {
-                    // Body
                     const color = getBodyColor(index, snake.length);
                     ctx.fillStyle = color;
                     ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
@@ -705,7 +703,6 @@
                 }
             });
 
-            // Draw food
             const fx = (food.x * canvas.width) / GRID_SIZE;
             const fy = (food.y * canvas.height) / GRID_SIZE;
             const size = (canvas.width / GRID_SIZE) * 0.9;
@@ -720,13 +717,11 @@
 
             direction = nextDirection;
 
-            // Calculate new head position
             const newHead = {
                 x: (snake[0].x + direction.x + GRID_SIZE) % GRID_SIZE,
                 y: (snake[0].y + direction.y + GRID_SIZE) % GRID_SIZE
             };
 
-            // Check collision with self
             if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
                 endGame();
                 return;
@@ -734,7 +729,6 @@
 
             snake.unshift(newHead);
 
-            // Check food collision
             if (newHead.x === food.x && newHead.y === food.y) {
                 score += 10;
                 updateScore();
