@@ -400,6 +400,17 @@
             </div>
 
             <div class="setting-group">
+                <label class="setting-label">⚡ Velocità del Gioco</label>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <input type="range" id="speedSlider" min="30" max="150" value="80" style="flex: 1; cursor: pointer; height: 6px;">
+                    <span id="speedLabel" style="font-weight: 600; color: #667eea; min-width: 40px; text-align: center; font-size: 14px;">80</span>
+                </div>
+                <div style="font-size: 11px; color: #999; margin-top: 6px; text-align: center;">
+                    <span id="speedDesc">Normale</span>
+                </div>
+            </div>
+
+            <div class="setting-group">
                 <div id="solid-mode">
                     <label class="setting-label">Seleziona Colore</label>
                     <div class="color-picker-group">
@@ -457,7 +468,7 @@
         // Configuration
         const GRID_SIZE = 20;
         const CELL_SIZE = 15;
-        const GAME_SPEED = 80;
+        let GAME_SPEED = 80;
         let selectedEmoji = '😘';
         let colorMode = 'solid';
         let solidColor = '#00ff00';
@@ -490,6 +501,34 @@
 
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+
+        // Speed control
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+        const speedDesc = document.getElementById('speedDesc');
+
+        speedSlider.addEventListener('input', (e) => {
+            GAME_SPEED = parseInt(e.target.value);
+            speedLabel.textContent = GAME_SPEED;
+            
+            if (GAME_SPEED <= 50) {
+                speedDesc.textContent = '🐢 Lentissimo';
+            } else if (GAME_SPEED <= 70) {
+                speedDesc.textContent = '🐇 Lento';
+            } else if (GAME_SPEED <= 90) {
+                speedDesc.textContent = '⚡ Normale';
+            } else if (GAME_SPEED <= 120) {
+                speedDesc.textContent = '🚀 Veloce';
+            } else {
+                speedDesc.textContent = '💥 Pazzesco!';
+            }
+
+            // Se il gioco è in esecuzione, aggiorna l'intervallo
+            if (gameRunning) {
+                clearInterval(gameLoop);
+                gameLoop = setInterval(updateGame, GAME_SPEED);
+            }
+        });
 
         // Emoji selection
         document.querySelectorAll('.emoji-btn').forEach(btn => {
