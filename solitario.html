@@ -170,21 +170,30 @@
             background: linear-gradient(135deg, #8B4513 0%, #654321 100%);
             border: 1px solid #333;
             position: relative;
+            font-size: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .card.hidden::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                45deg,
-                rgba(255, 255, 255, 0.05),
-                rgba(255, 255, 255, 0.05) 2px,
-                transparent 2px,
-                transparent 4px
-            );
-            border-radius: 5px;
+            content: '🂠';
+        }
+
+        .card.dragging {
+            opacity: 0.7;
+            transform: scale(1.1);
+            z-index: 1000;
+        }
+
+        .card.valid-drag {
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+        }
+
+        .slot.drag-over {
+            background: linear-gradient(135deg, rgba(100, 200, 150, 0.9) 0%, rgba(70, 170, 120, 0.9) 100%);
+            border: 3px solid rgba(0, 255, 136, 0.8);
+            transform: scale(1.05);
         }
 
         .stock {
@@ -362,8 +371,16 @@
                 this.startTime = null;
                 this.history = [];
                 this.selectedCard = null;
+                this.draggedCard = null;
+                this.draggedFrom = null;
                 this.newGame();
                 this.startTimer();
+                this.setupDragListeners();
+            }
+
+            setupDragListeners() {
+                document.addEventListener('dragover', (e) => e.preventDefault());
+                document.addEventListener('drop', (e) => e.preventDefault());
             }
 
             createDeck() {
@@ -511,6 +528,7 @@
                 this.renderWaste();
                 this.renderFoundations();
                 this.renderTableau();
+                setTimeout(() => this.makeSlotDropZone(), 0);
             }
 
             renderWaste() {
@@ -552,29 +570,123 @@
                 if (card.faceUp) {
                     div.className = `card ${SUIT_COLORS[card.suit]}`;
                     div.textContent = `${card.rank}${SUIT_SYMBOLS[card.suit]}`;
-                    div.onclick = () => this.handleCardClick(card, pile, pileIndex, cardIndex);
+                    div.draggable = true;
+                    
+                    div.addEventListener('dragstart', (e) => {
+                        this.draggedCard = card;
+                        this.draggedFrom = { pile, pileIndex, cardIndex };
+                        div.classList.add('dragging');
+                        div.classList.add('valid-drag');
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+
+                    div.addEventListener('dragend', (e) => {
+                        div.classList.remove('dragging');
+                        div.classList.remove('valid-drag');
+                        document.querySelectorAll('.slot.drag-over').forEach(el => {
+                            el.classList.remove('drag-over');
+                        });
+                    });
+
+                    div.addEventListener('click', () => {
+                        this.tryAutoMove(card);
+                    });
                 } else {
                     div.className = 'card hidden';
+                    div.addEventListener('click', () => {
+                        if (pile === 'stock' || pile === 'waste') {
+                            this.drawCard();
+                        }
+                    });
                 }
                 return div;
             }
 
-            handleCardClick(card, pile, pileIndex, cardIndex) {
+            makeSlotDropZone() {
+                const slots = document.querySelectorAll('.slot');
+                slots.forEach((slot, index) => {
+                    slot.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        if (this.draggedCard) {
+                            slot.classList.add('drag-over');
+                        }
+                        e.dataTransfer.dropEffect = 'move';
+                    });
+
+                    slot.addEventListener('dragleave', (e) => {
+                        slot.classList.remove('drag-over');
+                    });
+
+                    slot.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        slot.classList.remove('drag-over');
+                        this.handleCardDrop(slot, index);
+                    });
+                });
+            }
+
+            handleCardDrop(slot, slotIndex) {
+                if (!this.draggedCard || !this.draggedFrom) return;
+
+                const { pile, pileIndex, cardIndex } = this.draggedFrom;
+                let sourcePile = null;
+
                 if (pile === 'waste') {
-                    this.selectedCard = { card, pile, pileIndex, cardIndex };
-                    this.tryAutoMove(card);
+                    sourcePile = this.waste;
                 } else if (pile === 'tableau') {
-                    this.tryAutoMove(card);
+                    sourcePile = this.tableau[pileIndex];
+                } else if (pile === 'foundation') {
+                    sourcePile = this.foundations[pileIndex];
+                } else if (pile === 'stock') {
+                    sourcePile = this.stock;
                 }
+
+                if (!sourcePile) return;
+
+                // Identifica il target
+                const slotId = slot.id;
+                if (slotId.startsWith('foundation')) {
+                    const foundationIndex = parseInt(slotId.split('-')[1]);
+                    if (this.moveToFoundation(this.draggedCard, foundationIndex)) {
+                        sourcePile.splice(cardIndex, 1);
+                        this.foundations[foundationIndex].push(this.draggedCard);
+                        this.moves++;
+                        this.history.push({ from: { pile, pileIndex, cardIndex }, to: { pile: 'foundation', pileIndex: foundationIndex } });
+                        this.render();
+                        this.updateStats();
+                        this.checkWin();
+                    }
+                } else if (slotId.startsWith('waste') || slotId === 'waste') {
+                    // Non permette drop su waste
+                    return;
+                } else if (slotId === 'stock') {
+                    // Non permette drop su stock
+                    return;
+                }
+
+                this.draggedCard = null;
+                this.draggedFrom = null;
             }
 
             tryAutoMove(card) {
                 for (let i = 0; i < 4; i++) {
                     if (this.moveToFoundation(card, i)) {
-                        // Simula la mossa
-                        return;
+                        // Auto-move a foundation
+                        for (let pile of [this.waste, ...this.tableau, ...this.foundations]) {
+                            const idx = pile.indexOf(card);
+                            if (idx !== -1) {
+                                pile.splice(idx, 1);
+                                this.foundations[i].push(card);
+                                this.moves++;
+                                this.render();
+                                this.updateStats();
+                                this.checkWin();
+                                return true;
+                            }
+                        }
                     }
                 }
+                return false;
             }
         }
 
