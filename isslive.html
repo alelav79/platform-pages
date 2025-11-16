@@ -307,9 +307,47 @@
         </div>
 
         <div class="passes-section">
-            <h2 class="info-title">🔭 Prossimi Passaggi Visibili da Napoli</h2>
+            <h2 class="info-title">🔭 Prossimi Passaggi ISS</h2>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label class="stat-label" style="display: block; margin-bottom: 8px;">📍 Località</label>
+                    <input type="text" id="locationInput" placeholder="Es: Roma, Milano, Venezia..." 
+                           value="Napoli, Italia"
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid rgba(102, 126, 234, 0.3); 
+                                  background: rgba(255,255,255,0.05); color: #fff; font-size: 1em;">
+                </div>
+                
+                <div>
+                    <label class="stat-label" style="display: block; margin-bottom: 8px;">📏 Raggio di Ricerca</label>
+                    <select id="radiusSelect" 
+                            style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid rgba(102, 126, 234, 0.3); 
+                                   background: rgba(255,255,255,0.05); color: #fff; font-size: 1em; cursor: pointer;">
+                        <option value="100">100 km (vicinanza estrema)</option>
+                        <option value="500">500 km (vicinanza alta)</option>
+                        <option value="1000" selected>1000 km (regionale)</option>
+                        <option value="2000">2000 km (nazionale)</option>
+                        <option value="5000">5000 km (continentale)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="searchPasses()" 
+                    style="width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           border: none; border-radius: 10px; color: white; font-size: 1.1em; font-weight: bold; 
+                           cursor: pointer; transition: all 0.3s ease; margin-bottom: 20px;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(102, 126, 234, 0.4)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                🔍 Cerca Passaggi
+            </button>
+            
+            <div id="search-info" style="margin-bottom: 15px; padding: 12px; background: rgba(102, 126, 234, 0.1); 
+                                         border-radius: 8px; border-left: 3px solid #667eea; display: none;">
+                <div style="color: #cbd5e0; font-size: 0.95em;" id="search-info-text"></div>
+            </div>
+            
             <div id="passes-container">
-                <div class="loading">Caricamento prossimi passaggi...</div>
+                <div class="loading">Inserisci una località e un raggio, poi clicca "Cerca Passaggi"</div>
             </div>
         </div>
 
@@ -365,6 +403,48 @@
 
         let followMode = true;
         let currentLayer = null;
+        let searchLocationMarker = null;
+        let radiusCircle = null;
+        
+        // Funzione per calcolare la distanza tra due punti (formula di Haversine)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Raggio della Terra in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        // Funzione per geocodificare un indirizzo
+        async function geocodeLocation(locationName) {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(locationName)}&limit=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'ISS-Tracker-App'
+                        }
+                    }
+                );
+                const data = await response.json();
+                
+                if (data.length > 0) {
+                    return {
+                        lat: parseFloat(data[0].lat),
+                        lon: parseFloat(data[0].lon),
+                        name: data[0].display_name
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Errore nel geocoding:', error);
+                return null;
+            }
+        }
         
         // Inizializzazione mappa
         const map = L.map('map').setView([YOUR_LOCATION.lat, YOUR_LOCATION.lon], 3);
@@ -450,62 +530,193 @@
         let pathPolylines = []; // Array per contenere più segmenti di percorso
         let lastLocation = '';
 
-        // Funzione per ottenere i prossimi passaggi visibili
-        async function getVisiblePasses() {
-            try {
-                const response = await fetch(
-                    `https://api.wheretheiss.at/v1/satellites/25544/passes?lat=${YOUR_LOCATION.lat}&lon=${YOUR_LOCATION.lon}&count=5`
-                );
-                const data = await response.json();
-                
-                const container = document.getElementById('passes-container');
-                
-                if (data.error) {
-                    container.innerHTML = '<p class="info-text">⚠️ Impossibile calcolare i prossimi passaggi al momento.</p>';
-                    return;
-                }
-                
-                if (data.length === 0) {
-                    container.innerHTML = '<p class="info-text">🌙 Nessun passaggio visibile previsto nei prossimi giorni.</p>';
-                    return;
-                }
-                
-                let html = '';
-                data.forEach((pass, index) => {
-                    const riseDate = new Date(pass.risetime * 1000);
-                    const duration = Math.round(pass.duration / 60); // converti in minuti
+        // Funzione principale per cercare i passaggi
+        async function searchPasses() {
+            const locationInput = document.getElementById('locationInput').value;
+            const radius = parseInt(document.getElementById('radiusSelect').value);
+            const container = document.getElementById('passes-container');
+            const searchInfo = document.getElementById('search-info');
+            const searchInfoText = document.getElementById('search-info-text');
+            
+            // Mostra loading
+            container.innerHTML = '<div class="loading">🔍 Ricerca passaggi in corso...</div>';
+            searchInfo.style.display = 'none';
+            
+            // Geocodifica la località
+            const location = await geocodeLocation(locationInput);
+            
+            if (!location) {
+                container.innerHTML = '<p class="info-text" style="color: #f56565;">⚠️ Località non trovata. Prova con un nome diverso (es: "Roma", "Milano", "Venezia")</p>';
+                return;
+            }
+            
+            // Mostra info sulla ricerca
+            searchInfo.style.display = 'block';
+            searchInfoText.innerHTML = `
+                📍 Località: <strong>${location.name.split(',')[0]}</strong><br>
+                📏 Raggio: <strong>${radius} km</strong><br>
+                🔄 Monitoraggio in tempo reale attivo...
+            `;
+            
+            // Rimuovi vecchi marker e cerchi se esistono
+            if (searchLocationMarker) map.removeLayer(searchLocationMarker);
+            if (radiusCircle) map.removeLayer(radiusCircle);
+            
+            // Aggiungi marker per la località cercata
+            searchLocationMarker = L.marker([location.lat, location.lon], {
+                icon: L.divIcon({
+                    className: 'search-location-icon',
+                    html: '<div style="font-size: 35px;">🎯</div>',
+                    iconSize: [35, 35],
+                    iconAnchor: [17.5, 17.5]
+                })
+            }).addTo(map).bindPopup(`
+                <div style="text-align: center;">
+                    <strong style="font-size: 1.1em;">🎯 Località di Ricerca</strong><br>
+                    <span style="font-size: 0.9em;">${location.name}</span><br>
+                    <span style="font-size: 0.9em;">Raggio: ${radius} km</span>
+                </div>
+            `);
+            
+            // Aggiungi cerchio per visualizzare il raggio
+            radiusCircle = L.circle([location.lat, location.lon], {
+                radius: radius * 1000, // converti in metri
+                color: '#667eea',
+                fillColor: '#667eea',
+                fillOpacity: 0.1,
+                weight: 2,
+                dashArray: '5, 10'
+            }).addTo(map);
+            
+            // Centra sulla località cercata
+            map.fitBounds(radiusCircle.getBounds(), { padding: [50, 50] });
+            
+            // Monitora la posizione della ISS in tempo reale
+            monitorISSPasses(location, radius);
+        }
+        
+        // Funzione per monitorare i passaggi della ISS
+        let passesData = [];
+        let monitoringInterval = null;
+        
+        async function monitorISSPasses(location, radius) {
+            const container = document.getElementById('passes-container');
+            
+            // Funzione per controllare la posizione attuale
+            async function checkCurrentPosition() {
+                try {
+                    const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                    const issData = await response.json();
                     
-                    // Formatta data e ora
-                    const dateStr = riseDate.toLocaleDateString('it-IT', { 
-                        weekday: 'long', 
+                    // Calcola la distanza attuale
+                    const distance = calculateDistance(
+                        location.lat, location.lon,
+                        issData.latitude, issData.longitude
+                    );
+                    
+                    const now = Date.now();
+                    
+                    // Verifica se la ISS è entro il raggio
+                    if (distance <= radius) {
+                        const existingPass = passesData.find(p => 
+                            Math.abs(p.startTime - now) < 300000 // stesso passaggio se entro 5 minuti
+                        );
+                        
+                        if (!existingPass) {
+                            passesData.unshift({
+                                startTime: now,
+                                distance: distance,
+                                altitude: issData.altitude,
+                                velocity: issData.velocity,
+                                inProgress: true
+                            });
+                        } else {
+                            existingPass.lastUpdate = now;
+                            existingPass.distance = distance;
+                        }
+                    } else {
+                        // Marca passaggi completati
+                        passesData.forEach(pass => {
+                            if (pass.inProgress && (now - pass.lastUpdate > 300000)) {
+                                pass.inProgress = false;
+                                pass.endTime = pass.lastUpdate;
+                            }
+                        });
+                    }
+                    
+                    // Aggiorna la visualizzazione
+                    updatePassesDisplay(location, radius, distance, issData);
+                    
+                } catch (error) {
+                    console.error('Errore nel monitoraggio:', error);
+                }
+            }
+            
+            // Controlla subito
+            checkCurrentPosition();
+            
+            // Ferma monitoraggio precedente se esiste
+            if (monitoringInterval) clearInterval(monitoringInterval);
+            
+            // Controlla ogni 5 secondi
+            monitoringInterval = setInterval(checkCurrentPosition, 5000);
+        }
+        
+        // Funzione per aggiornare la visualizzazione dei passaggi
+        function updatePassesDisplay(location, radius, currentDistance, issData) {
+            const container = document.getElementById('passes-container');
+            
+            let html = '';
+            
+            // Mostra stato attuale
+            const isWithinRadius = currentDistance <= radius;
+            html += `
+                <div class="pass-item" style="border-left-color: ${isWithinRadius ? '#48bb78' : '#f56565'}; background: ${isWithinRadius ? 'rgba(72, 187, 120, 0.1)' : 'rgba(245, 101, 101, 0.05)'};">
+                    <div class="pass-time" style="color: ${isWithinRadius ? '#48bb78' : '#f56565'};">
+                        ${isWithinRadius ? '🟢 ISS NEL RAGGIO!' : '🔴 ISS Fuori dal Raggio'}
+                    </div>
+                    <div class="pass-details">
+                        📏 Distanza attuale: <strong>${currentDistance.toFixed(0)} km</strong><br>
+                        🛰️ Altitudine: ${issData.altitude.toFixed(0)} km<br>
+                        ⚡ Velocità: ${issData.velocity.toFixed(0)} km/h<br>
+                        ${isWithinRadius ? '✨ <strong>La ISS è visibile dalla tua località!</strong>' : `⏳ Attesa prossimo passaggio entro ${radius} km...`}
+                    </div>
+                </div>
+            `;
+            
+            // Mostra storico passaggi
+            if (passesData.length > 0) {
+                html += '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);"><strong style="color: #667eea;">📜 Storico Passaggi:</strong></div>';
+                
+                passesData.slice(0, 10).forEach((pass, index) => {
+                    const passDate = new Date(pass.startTime);
+                    const dateStr = passDate.toLocaleDateString('it-IT', { 
                         day: 'numeric', 
-                        month: 'long' 
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
                     });
-                    const timeStr = riseDate.toLocaleTimeString('it-IT', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
+                    
+                    const duration = pass.endTime ? 
+                        Math.round((pass.endTime - pass.startTime) / 60000) : 
+                        'In corso';
                     
                     html += `
-                        <div class="pass-item">
+                        <div class="pass-item" style="opacity: ${1 - (index * 0.1)};">
                             <div class="pass-time">
-                                ${index === 0 ? '🌟 ' : ''}${dateStr} alle ${timeStr}
+                                ${pass.inProgress ? '⚡ ' : '✅ '}${dateStr}
                             </div>
                             <div class="pass-details">
-                                ⏱️ Durata: ~${duration} minuti<br>
-                                ${index === 0 ? '✨ <strong>Prossimo passaggio!</strong>' : ''}
+                                📏 Distanza minima: ${pass.distance.toFixed(0)} km<br>
+                                ⏱️ Durata: ${duration === 'In corso' ? duration : duration + ' min'}<br>
+                                ${pass.inProgress ? '🔵 <strong>Passaggio in corso!</strong>' : ''}
                             </div>
                         </div>
                     `;
                 });
-                
-                container.innerHTML = html;
-                
-            } catch (error) {
-                console.error('Errore nel recupero dei passaggi:', error);
-                document.getElementById('passes-container').innerHTML = 
-                    '<p class="info-text">⚠️ Errore nel caricamento dei passaggi visibili.</p>';
             }
+            
+            container.innerHTML = html;
         }
 
         // Funzione per ottenere il nome del luogo dalla posizione
@@ -709,11 +920,6 @@
         // Aggiorna immediatamente e poi ogni 5 secondi
         updateISSPosition();
         setInterval(updateISSPosition, 5000);
-
-        // Carica i prossimi passaggi visibili
-        getVisiblePasses();
-        // Aggiorna i passaggi ogni 30 minuti
-        setInterval(getVisiblePasses, 30 * 60 * 1000);
 
         // Aggiorna l'ora del browser ogni secondo
         setInterval(() => {
