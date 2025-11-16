@@ -1,1 +1,440 @@
-ciao
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS Tracker - Stazione Spaziale Internazionale</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                filter: drop-shadow(0 0 5px rgba(102, 126, 234, 0.5));
+            }
+            to {
+                filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.8));
+            }
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #a0aec0;
+            margin-top: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #a0aec0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .map-container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 30px;
+        }
+
+        #map {
+            height: 600px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .info-text {
+            line-height: 1.8;
+            color: #cbd5e0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #48bb78;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1);
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+            margin-top: 40px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        /* Stile personalizzato per il popup della mappa */
+        .leaflet-popup-content-wrapper {
+            background: rgba(10, 14, 39, 0.95);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(10, 14, 39, 0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛰️ ISS Live Tracker</h1>
+            <p class="subtitle">
+                <span class="status-indicator"></span>
+                Tracciamento in tempo reale della Stazione Spaziale Internazionale
+            </p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Latitudine</div>
+                <div class="stat-value" id="latitude">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Longitudine</div>
+                <div class="stat-value" id="longitude">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Altitudine</div>
+                <div class="stat-value" id="altitude">-- km</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Velocità</div>
+                <div class="stat-value" id="velocity">-- km/h</div>
+            </div>
+            <div class="stat-card" style="grid-column: 1 / -1;">
+                <div class="stat-label">📍 Posizione Attuale</div>
+                <div class="stat-value" id="location" style="font-size: 1.3em;">
+                    <span class="loading">Caricamento...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="info-panel">
+            <h2 class="info-title">📡 Informazioni sulla ISS</h2>
+            <p class="info-text">
+                La Stazione Spaziale Internazionale (ISS) è un laboratorio spaziale in orbita terrestre bassa, 
+                situato a circa 400 km di altitudine. Viaggia a una velocità di circa 28.000 km/h e completa 
+                un'orbita completa attorno alla Terra ogni 90 minuti circa. La ISS è il risultato della 
+                collaborazione tra cinque agenzie spaziali: NASA (Stati Uniti), Roscosmos (Russia), 
+                JAXA (Giappone), ESA (Europa) e CSA (Canada).
+            </p>
+        </div>
+
+        <footer>
+            <p>Dati forniti da Open Notify API | Aggiornamento ogni 5 secondi</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Made with 💙 by your friendly AI assistant</p>
+        </footer>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inizializzazione mappa
+        const map = L.map('map').setView([0, 0], 2);
+        
+        // Tile layer con tema scuro
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Icona personalizzata per la ISS
+        const issIcon = L.divIcon({
+            className: 'iss-icon',
+            html: `
+                <div style="
+                    font-size: 40px;
+                    text-align: center;
+                ">
+                    🛰️
+                </div>
+            `,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+
+        let issMarker = null;
+        let issPath = [];
+        let pathPolyline = null;
+        let lastLocation = '';
+
+        // Funzione per ottenere il nome del luogo dalla posizione
+        async function getLocationName(lat, lon) {
+            try {
+                // Usa Nominatim (OpenStreetMap) per reverse geocoding
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=3&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'ISS-Tracker-App'
+                        }
+                    }
+                );
+                const data = await response.json();
+                
+                if (data.address) {
+                    // Priorità: paese > continente > oceano
+                    const country = data.address.country;
+                    const ocean = data.address.body_of_water;
+                    
+                    if (country) {
+                        return `🌍 ${country}`;
+                    } else if (ocean) {
+                        return `🌊 ${ocean}`;
+                    } else {
+                        return '🌊 Oceano';
+                    }
+                } else {
+                    return '🌊 Oceano';
+                }
+            } catch (error) {
+                console.error('Errore nel reverse geocoding:', error);
+                return 'Caricamento...';
+            }
+        }
+
+        // Funzione per aggiornare i dati della ISS
+        async function updateISSPosition() {
+            try {
+                const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+                const data = await response.json();
+
+                const lat = parseFloat(data.latitude).toFixed(4);
+                const lon = parseFloat(data.longitude).toFixed(4);
+                const alt = parseFloat(data.altitude).toFixed(2);
+                const vel = parseFloat(data.velocity).toFixed(2);
+
+                // Aggiorna le statistiche
+                document.getElementById('latitude').textContent = lat + '°';
+                document.getElementById('longitude').textContent = lon + '°';
+                document.getElementById('altitude').textContent = alt + ' km';
+                document.getElementById('velocity').textContent = vel + ' km/h';
+
+                // Aggiorna la posizione geografica (ogni 10 secondi per non sovraccaricare l'API)
+                if (!lastLocation || issPath.length % 2 === 0) {
+                    const location = await getLocationName(data.latitude, data.longitude);
+                    lastLocation = location;
+                    document.getElementById('location').textContent = location;
+                }
+
+                // Aggiorna marker sulla mappa
+                if (issMarker) {
+                    issMarker.setLatLng([data.latitude, data.longitude]);
+                    issMarker.getPopup().setContent(`
+                        <div style="text-align: center;">
+                            <strong style="font-size: 1.2em;">🛰️ ISS</strong><br>
+                            <span style="font-size: 0.9em;">${lastLocation}</span><br><br>
+                            <span style="font-size: 0.9em;">Lat: ${lat}°</span><br>
+                            <span style="font-size: 0.9em;">Lon: ${lon}°</span><br>
+                            <span style="font-size: 0.9em;">Alt: ${alt} km</span><br>
+                            <span style="font-size: 0.9em;">Vel: ${vel} km/h</span>
+                        </div>
+                    `);
+                } else {
+                    const location = await getLocationName(data.latitude, data.longitude);
+                    lastLocation = location;
+                    document.getElementById('location').textContent = location;
+                    
+                    issMarker = L.marker([data.latitude, data.longitude], {icon: issIcon})
+                        .addTo(map)
+                        .bindPopup(`
+                            <div style="text-align: center;">
+                                <strong style="font-size: 1.2em;">🛰️ ISS</strong><br>
+                                <span style="font-size: 0.9em;">${location}</span><br><br>
+                                <span style="font-size: 0.9em;">Lat: ${lat}°</span><br>
+                                <span style="font-size: 0.9em;">Lon: ${lon}°</span><br>
+                                <span style="font-size: 0.9em;">Alt: ${alt} km</span><br>
+                                <span style="font-size: 0.9em;">Vel: ${vel} km/h</span>
+                            </div>
+                        `);
+                    map.setView([data.latitude, data.longitude], 3);
+                }
+
+                // Aggiungi punto al percorso
+                issPath.push([data.latitude, data.longitude]);
+                if (issPath.length > 200) {
+                    issPath.shift(); // Mantieni solo gli ultimi 200 punti
+                }
+
+                // Aggiorna la traccia del percorso con gradiente
+                if (pathPolyline) {
+                    map.removeLayer(pathPolyline);
+                }
+                
+                pathPolyline = L.polyline(issPath, {
+                    color: '#667eea',
+                    weight: 3,
+                    opacity: 0.8,
+                    smoothFactor: 1
+                }).addTo(map);
+
+                // Aggiungi un cerchio per mostrare la direzione del movimento
+                if (issPath.length > 1) {
+                    const lastPoint = issPath[issPath.length - 1];
+                    const secondLastPoint = issPath[issPath.length - 2];
+                    
+                    // Calcola l'angolo di movimento
+                    const angle = Math.atan2(
+                        lastPoint[0] - secondLastPoint[0],
+                        lastPoint[1] - secondLastPoint[1]
+                    ) * 180 / Math.PI;
+                    
+                    // Aggiorna l'icona con la direzione
+                    const rotatedIcon = L.divIcon({
+                        className: 'iss-icon',
+                        html: `
+                            <div style="
+                                font-size: 40px;
+                                text-align: center;
+                                transform: rotate(${angle}deg);
+                                transition: transform 0.5s ease;
+                            ">
+                                🛰️
+                            </div>
+                        `,
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 20]
+                    });
+                    issMarker.setIcon(rotatedIcon);
+                }
+
+            } catch (error) {
+                console.error('Errore nel recupero dei dati ISS:', error);
+                document.getElementById('location').textContent = 'Errore di connessione';
+            }
+        }
+
+        // Aggiorna immediatamente e poi ogni 5 secondi
+        updateISSPosition();
+        setInterval(updateISSPosition, 5000);
+
+        // Aggiorna l'ora del browser ogni secondo
+        setInterval(() => {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('it-IT');
+            document.querySelector('.subtitle').innerHTML = `
+                <span class="status-indicator"></span>
+                Tracciamento in tempo reale della Stazione Spaziale Internazionale | ${timeString}
+            `;
+        }, 1000);
+    </script>
+</body>
+</html>
