@@ -186,6 +186,89 @@
         .leaflet-popup-tip {
             background: rgba(10, 14, 39, 0.95);
         }
+
+        /* Controlli mappa */
+        .map-controls {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .control-btn.active {
+            background: rgba(102, 126, 234, 0.5);
+            border-color: #667eea;
+        }
+
+        .layer-selector {
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            color: #fff;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .layer-selector option {
+            background: #0a0e27;
+            color: #fff;
+        }
+
+        /* Sezione passaggi visibili */
+        .passes-section {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .pass-item {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
+        .pass-time {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .pass-details {
+            font-size: 0.9em;
+            color: #cbd5e0;
+        }
     </style>
 </head>
 <body>
@@ -223,7 +306,25 @@
             </div>
         </div>
 
+        <div class="passes-section">
+            <h2 class="info-title">🔭 Prossimi Passaggi Visibili da Napoli</h2>
+            <div id="passes-container">
+                <div class="loading">Caricamento prossimi passaggi...</div>
+            </div>
+        </div>
+
         <div class="map-container">
+            <div class="map-controls">
+                <button class="control-btn active" id="followBtn" onclick="toggleFollow()">
+                    📍 Segui ISS
+                </button>
+                <select class="layer-selector" id="layerSelector" onchange="changeMapLayer()">
+                    <option value="dark">🌙 Scuro</option>
+                    <option value="satellite">🛰️ Satellite</option>
+                    <option value="street">🗺️ Stradale</option>
+                    <option value="terrain">🏔️ Terreno</option>
+                </select>
+            </div>
             <div id="map"></div>
         </div>
 
@@ -236,6 +337,15 @@
                 collaborazione tra cinque agenzie spaziali: NASA (Stati Uniti), Roscosmos (Russia), 
                 JAXA (Giappone), ESA (Europa) e CSA (Canada).
             </p>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <h3 class="info-title" style="font-size: 1.1em; margin-bottom: 10px;">🛤️ Traccia del Percorso</h3>
+                <p class="info-text" style="font-size: 0.95em;">
+                    La linea sulla mappa mostra il percorso orbitale degli ultimi ~25 minuti. 
+                    I segmenti più <span style="color: #4a5568; font-weight: bold;">scuri e sottili</span> rappresentano la posizione passata, 
+                    mentre quelli più <span style="color: #667eea; font-weight: bold;">luminosi e spessi</span> mostrano la posizione recente. 
+                    Il punto blu brillante 🔵 indica la posizione attuale della ISS.
+                </p>
+            </div>
         </div>
 
         <footer>
@@ -246,15 +356,79 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Inizializzazione mappa
-        const map = L.map('map').setView([0, 0], 2);
+        // Configurazione
+        const YOUR_LOCATION = {
+            lat: 40.8518,  // Napoli
+            lon: 14.2681,
+            name: 'Napoli, Italia'
+        };
+
+        let followMode = true;
+        let currentLayer = null;
         
-        // Tile layer con tema scuro
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(map);
+        // Inizializzazione mappa
+        const map = L.map('map').setView([YOUR_LOCATION.lat, YOUR_LOCATION.lon], 3);
+        
+        // Layer disponibili
+        const mapLayers = {
+            dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri',
+                maxZoom: 19
+            }),
+            street: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }),
+            terrain: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
+                maxZoom: 17
+            })
+        };
+
+        // Aggiungi layer iniziale
+        currentLayer = mapLayers.dark;
+        currentLayer.addTo(map);
+
+        // Aggiungi marker per la tua posizione
+        const yourLocationMarker = L.marker([YOUR_LOCATION.lat, YOUR_LOCATION.lon], {
+            icon: L.divIcon({
+                className: 'your-location-icon',
+                html: '<div style="font-size: 30px;">📍</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            })
+        }).addTo(map).bindPopup(`
+            <div style="text-align: center;">
+                <strong>La Tua Posizione</strong><br>
+                ${YOUR_LOCATION.name}
+            </div>
+        `);
+
+        // Funzione per cambiare layer
+        function changeMapLayer() {
+            const selectedLayer = document.getElementById('layerSelector').value;
+            map.removeLayer(currentLayer);
+            currentLayer = mapLayers[selectedLayer];
+            currentLayer.addTo(map);
+        }
+
+        // Funzione per attivare/disattivare il follow mode
+        function toggleFollow() {
+            followMode = !followMode;
+            const btn = document.getElementById('followBtn');
+            if (followMode) {
+                btn.classList.add('active');
+                btn.textContent = '📍 Segui ISS';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '🔓 Libera';
+            }
+        }
 
         // Icona personalizzata per la ISS
         const issIcon = L.divIcon({
@@ -273,8 +447,66 @@
 
         let issMarker = null;
         let issPath = [];
-        let pathPolyline = null;
+        let pathPolylines = []; // Array per contenere più segmenti di percorso
         let lastLocation = '';
+
+        // Funzione per ottenere i prossimi passaggi visibili
+        async function getVisiblePasses() {
+            try {
+                const response = await fetch(
+                    `https://api.wheretheiss.at/v1/satellites/25544/passes?lat=${YOUR_LOCATION.lat}&lon=${YOUR_LOCATION.lon}&count=5`
+                );
+                const data = await response.json();
+                
+                const container = document.getElementById('passes-container');
+                
+                if (data.error) {
+                    container.innerHTML = '<p class="info-text">⚠️ Impossibile calcolare i prossimi passaggi al momento.</p>';
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    container.innerHTML = '<p class="info-text">🌙 Nessun passaggio visibile previsto nei prossimi giorni.</p>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach((pass, index) => {
+                    const riseDate = new Date(pass.risetime * 1000);
+                    const duration = Math.round(pass.duration / 60); // converti in minuti
+                    
+                    // Formatta data e ora
+                    const dateStr = riseDate.toLocaleDateString('it-IT', { 
+                        weekday: 'long', 
+                        day: 'numeric', 
+                        month: 'long' 
+                    });
+                    const timeStr = riseDate.toLocaleTimeString('it-IT', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    
+                    html += `
+                        <div class="pass-item">
+                            <div class="pass-time">
+                                ${index === 0 ? '🌟 ' : ''}${dateStr} alle ${timeStr}
+                            </div>
+                            <div class="pass-details">
+                                ⏱️ Durata: ~${duration} minuti<br>
+                                ${index === 0 ? '✨ <strong>Prossimo passaggio!</strong>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Errore nel recupero dei passaggi:', error);
+                document.getElementById('passes-container').innerHTML = 
+                    '<p class="info-text">⚠️ Errore nel caricamento dei passaggi visibili.</p>';
+            }
+        }
 
         // Funzione per ottenere il nome del luogo dalla posizione
         async function getLocationName(lat, lon) {
@@ -365,26 +597,78 @@
                                 <span style="font-size: 0.9em;">Vel: ${vel} km/h</span>
                             </div>
                         `);
-                    map.setView([data.latitude, data.longitude], 3);
+                    
+                    // Centra sulla ISS solo la prima volta
+                    if (followMode) {
+                        map.setView([data.latitude, data.longitude], 4);
+                    }
+                }
+
+                // Segui la ISS se il follow mode è attivo
+                if (followMode && issPath.length > 1) {
+                    map.panTo([data.latitude, data.longitude], {
+                        animate: true,
+                        duration: 0.5
+                    });
                 }
 
                 // Aggiungi punto al percorso
                 issPath.push([data.latitude, data.longitude]);
-                if (issPath.length > 200) {
-                    issPath.shift(); // Mantieni solo gli ultimi 200 punti
+                if (issPath.length > 300) {
+                    issPath.shift(); // Mantieni solo gli ultimi 300 punti (circa 25 minuti di tracciamento)
                 }
 
-                // Aggiorna la traccia del percorso con gradiente
-                if (pathPolyline) {
-                    map.removeLayer(pathPolyline);
+                // Rimuovi i vecchi segmenti di percorso
+                pathPolylines.forEach(polyline => map.removeLayer(polyline));
+                pathPolylines = [];
+
+                // Crea segmenti di percorso con gradiente di colore e opacità
+                // Dal più vecchio (più trasparente/grigio) al più recente (più opaco/blu)
+                if (issPath.length > 1) {
+                    const segmentSize = 20; // Numero di punti per segmento
+                    const numSegments = Math.ceil(issPath.length / segmentSize);
+                    
+                    for (let i = 0; i < numSegments; i++) {
+                        const startIdx = i * segmentSize;
+                        const endIdx = Math.min(startIdx + segmentSize + 1, issPath.length);
+                        const segmentPath = issPath.slice(startIdx, endIdx);
+                        
+                        if (segmentPath.length > 1) {
+                            // Calcola l'intensità del colore basata sulla posizione nel percorso
+                            const progress = i / numSegments; // 0 = vecchio, 1 = recente
+                            
+                            // Gradiente da grigio scuro a blu brillante
+                            const opacity = 0.3 + (progress * 0.6); // Da 0.3 a 0.9
+                            const hue = 240; // Blu
+                            const saturation = 40 + (progress * 50); // Da 40% a 90%
+                            const lightness = 40 + (progress * 20); // Da 40% a 60%
+                            
+                            const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                            const weight = 2 + (progress * 2); // Da 2 a 4 pixel
+                            
+                            const polyline = L.polyline(segmentPath, {
+                                color: color,
+                                weight: weight,
+                                opacity: opacity,
+                                smoothFactor: 1
+                            }).addTo(map);
+                            
+                            pathPolylines.push(polyline);
+                        }
+                    }
+                    
+                    // Aggiungi un punto luminoso sulla posizione più recente
+                    const currentPos = issPath[issPath.length - 1];
+                    const recentMarker = L.circleMarker(currentPos, {
+                        radius: 8,
+                        fillColor: '#667eea',
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map);
+                    pathPolylines.push(recentMarker);
                 }
-                
-                pathPolyline = L.polyline(issPath, {
-                    color: '#667eea',
-                    weight: 3,
-                    opacity: 0.8,
-                    smoothFactor: 1
-                }).addTo(map);
 
                 // Aggiungi un cerchio per mostrare la direzione del movimento
                 if (issPath.length > 1) {
@@ -425,6 +709,11 @@
         // Aggiorna immediatamente e poi ogni 5 secondi
         updateISSPosition();
         setInterval(updateISSPosition, 5000);
+
+        // Carica i prossimi passaggi visibili
+        getVisiblePasses();
+        // Aggiorna i passaggi ogni 30 minuti
+        setInterval(getVisiblePasses, 30 * 60 * 1000);
 
         // Aggiorna l'ora del browser ogni secondo
         setInterval(() => {
