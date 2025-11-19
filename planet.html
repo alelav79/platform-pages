@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulatore Pianeta 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000; }
+        
+        /* Pannello di Controllo */
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 250px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 10px;}
+
+        .control-group { margin-bottom: 15px; }
+        
+        label { display: block; font-size: 0.9rem; margin-bottom: 5px; }
+        
+        input[type=range] { width: 100%; cursor: pointer; }
+        input[type=color] { width: 100%; height: 30px; border: none; cursor: pointer; }
+        
+        /* Stile pulsante wireframe */
+        .toggle-container { display: flex; align-items: center; justify-content: space-between; }
+        .toggle-switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2196F3; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <h2>⚙️ Modifica Pianeta</h2>
+        
+        <div class="control-group">
+            <label>Colore Superficie</label>
+            <input type="color" id="colorPicker" value="#3498db">
+        </div>
+
+        <div class="control-group">
+            <label>Velocità Rotazione</label>
+            <input type="range" id="speedRange" min="0" max="0.05" step="0.001" value="0.005">
+        </div>
+
+        <div class="control-group">
+            <label>Ruvidità (Roughness)</label>
+            <input type="range" id="roughnessRange" min="0" max="1" step="0.1" value="0.7">
+        </div>
+
+        <div class="control-group">
+            <label>Dimensione</label>
+            <input type="range" id="scaleRange" min="0.5" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group toggle-container">
+            <label>Modalità Reticolo</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="wireframeToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    
+    <div id="info">Clicca e trascina per ruotare la vista • Rotella per zoomare</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // 1. SETUP SCENA
+        const scene = new THREE.Scene();
+        // Nebbia nera per profondità
+        scene.fog = new THREE.FogExp2(0x000000, 0.02); 
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Controlli Mouse (OrbitControls)
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        
+        // 2. CREAZIONE PIANETA
+        const geometry = new THREE.SphereGeometry(5, 64, 64); // Raggio 5, segmenti alti per fluidità
+        const material = new THREE.MeshStandardMaterial({ 
+            color: 0x3498db,
+            roughness: 0.7,
+            metalness: 0.1,
+            flatShading: false
+        });
+        const planet = new THREE.Mesh(geometry, material);
+        scene.add(planet);
+
+        // Aggiungiamo un'atmosfera (Glow semplice)
+        const atmosphereGeometry = new THREE.SphereGeometry(5.2, 64, 64);
+        const atmosphereMaterial = new THREE.MeshBasicMaterial({
+            color: 0x3498db,
+            transparent: true,
+            opacity: 0.15,
+            side: THREE.BackSide
+        });
+        const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+        scene.add(atmosphere);
+
+
+        // 3. CREAZIONE STELLE (Sfondo)
+        function createStars() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starMaterial = new THREE.PointsMaterial({color: 0xffffff});
+            const starVertices = [];
+            for(let i=0; i<5000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x,y,z);
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+        createStars();
+
+        // 4. LUCI
+        const ambientLight = new THREE.AmbientLight(0x404040); // Luce soffusa base
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5); // Simula il sole
+        sunLight.position.set(50, 20, 30);
+        scene.add(sunLight);
+
+        // Posizione camera iniziale
+        camera.position.z = 15;
+
+        // Variabili di stato
+        let rotationSpeed = 0.005;
+
+        // 5. LOGICA INTERATTIVA (DOM Events)
+        
+        // Colore
+        document.getElementById('colorPicker').addEventListener('input', (e) => {
+            planet.material.color.set(e.target.value);
+            atmosphere.material.color.set(e.target.value);
+        });
+
+        // Velocità
+        document.getElementById('speedRange').addEventListener('input', (e) => {
+            rotationSpeed = parseFloat(e.target.value);
+        });
+
+        // Ruvidità (Riflessione luce)
+        document.getElementById('roughnessRange').addEventListener('input', (e) => {
+            planet.material.roughness = parseFloat(e.target.value);
+        });
+
+        // Scala (Dimensione)
+        document.getElementById('scaleRange').addEventListener('input', (e) => {
+            const scale = parseFloat(e.target.value);
+            planet.scale.set(scale, scale, scale);
+            atmosphere.scale.set(scale, scale, scale);
+        });
+
+        // Wireframe (Reticolo)
+        document.getElementById('wireframeToggle').addEventListener('change', (e) => {
+            planet.material.wireframe = e.target.checked;
+            atmosphere.visible = !e.target.checked; // Nasconde atmosfera in wireframe
+        });
+
+        // Resize della finestra
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 6. LOOP DI ANIMAZIONE
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotazione pianeta
+            planet.rotation.y += rotationSpeed;
+            atmosphere.rotation.y += rotationSpeed; // L'atmosfera ruota col pianeta (opzionale)
+
+            // Aggiorna controlli orbita
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
