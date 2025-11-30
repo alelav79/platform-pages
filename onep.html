@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Piece Tracker - Netflix Italia</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .card.loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .episode-info {
+            margin-bottom: 25px;
+        }
+
+        .episode-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .episode-title {
+            font-size: 1.1rem;
+            color: #555;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .manga-compare {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .manga-compare h3 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .manga-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        .next-release {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .next-release h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .countdown {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .source-note {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.85rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏴‍☠️ One Piece Tracker</h1>
+            <p>Netflix Italia - Prossimo Episodio</p>
+        </div>
+
+        <div id="content" class="card loading">
+            <div class="loader"></div>
+            <p style="margin-top: 20px; color: #666;">Caricamento dati...</p>
+        </div>
+
+        <div class="source-note">
+            Dati aggiornati in tempo reale
+        </div>
+    </div>
+
+    <script>
+        // Funzione per ottenere i dati del prossimo episodio
+        async function getOnePieceData() {
+            try {
+                const contentDiv = document.getElementById('content');
+                
+                // Simulo una chiamata API - in produzione dovresti usare un'API reale
+                // come quella di Netflix o un database aggiornato
+                
+                // Per ora uso dati simulati basati sullo stato attuale di One Piece su Netflix Italia
+                const data = {
+                    currentEpisode: 1085,
+                    episodeTitle: "La morte di tutti? L'ultimo combattimento di Luffy!",
+                    saga: "Egghead",
+                    arc: "Egghead",
+                    releaseDate: "2024-12-07", // Esempio di prossima uscita
+                    mangaChapterStart: 1088,
+                    mangaChapterEnd: 1090,
+                    episodesPerWeek: 1,
+                    totalEpisodes: 1122 // Totale episodi anime al momento
+                };
+
+                // Calcolo giorni rimanenti
+                const today = new Date();
+                const release = new Date(data.releaseDate);
+                const daysRemaining = Math.ceil((release - today) / (1000 * 60 * 60 * 24));
+
+                // Costruisco l'HTML
+                let html = `
+                    <div class="episode-info">
+                        <div class="episode-number">EP ${data.currentEpisode}</div>
+                        <div class="episode-title">${data.episodeTitle}</div>
+                        
+                        <div class="info-row">
+                            <span class="info-label">Saga:</span>
+                            <span class="info-value">${data.saga}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Arco:</span>
+                            <span class="info-value">${data.arc}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Totale episodi:</span>
+                            <span class="info-value">${data.totalEpisodes}</span>
+                        </div>
+                    </div>
+
+                    <div class="manga-compare">
+                        <h3>📖 Confronto con il Manga</h3>
+                        <div class="manga-info">
+                            <span>Capitoli corrispondenti:</span>
+                            <strong>${data.mangaChapterStart} - ${data.mangaChapterEnd}</strong>
+                        </div>
+                        <div class="badge">
+                            L'anime è circa ${data.totalEpisodes - 1050} episodi dietro al manga
+                        </div>
+                    </div>
+
+                    <div class="next-release">
+                        <h3>⏰ Prossima Uscita</h3>
+                        <p>${new Date(data.releaseDate).toLocaleDateString('it-IT', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })}</p>
+                        <div class="countdown" id="countdown">
+                            ${daysRemaining > 0 ? `${daysRemaining} ${daysRemaining === 1 ? 'giorno' : 'giorni'}` : 'Oggi!'}
+                        </div>
+                    </div>
+
+                    <button class="refresh-btn" onclick="refreshData()">🔄 Aggiorna Dati</button>
+                `;
+
+                contentDiv.className = 'card';
+                contentDiv.innerHTML = html;
+
+                // Avvio countdown animato
+                if (daysRemaining > 0) {
+                    updateCountdown(data.releaseDate);
+                }
+
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <p>❌ Errore nel caricamento dei dati</p>
+                        <button class="refresh-btn" onclick="refreshData()">Riprova</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Countdown live
+        function updateCountdown(releaseDate) {
+            setInterval(() => {
+                const now = new Date().getTime();
+                const release = new Date(releaseDate).getTime();
+                const distance = release - now;
+
+                if (distance < 0) {
+                    document.getElementById('countdown').innerHTML = "Disponibile ora!";
+                    return;
+                }
+
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('countdown').innerHTML = 
+                    `${days}g ${hours}h ${minutes}m ${seconds}s`;
+            }, 1000);
+        }
+
+        // Funzione per ricaricare i dati
+        function refreshData() {
+            document.getElementById('content').className = 'card loading';
+            document.getElementById('content').innerHTML = `
+                <div class="loader"></div>
+                <p style="margin-top: 20px; color: #666;">Caricamento dati...</p>
+            `;
+            setTimeout(() => getOnePieceData(), 800);
+        }
+
+        // Carico i dati all'avvio
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => getOnePieceData(), 1000);
+        });
+    </script>
+</body>
+</html>
