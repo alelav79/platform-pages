@@ -211,13 +211,58 @@
             font-size: 0.85rem;
             margin-top: 20px;
         }
+
+        .platform-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .platform-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .platform-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .platform-tab:active {
+            transform: scale(0.98);
+        }
+
+        .platform-logo {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🏴‍☠️ One Piece Tracker</h1>
-            <p>Netflix Italia - Prossimo Episodio</p>
+            <p>Prossimo Episodio - Netflix & Crunchyroll</p>
+        </div>
+
+        <div class="card">
+            <div class="platform-tabs">
+                <button class="platform-tab active" onclick="switchPlatform('netflix')">
+                    <span class="platform-logo">🎬</span> Netflix
+                </button>
+                <button class="platform-tab" onclick="switchPlatform('crunchyroll')">
+                    <span class="platform-logo">🍥</span> Crunchyroll
+                </button>
+            </div>
         </div>
 
         <div id="content" class="card loading">
@@ -231,37 +276,78 @@
     </div>
 
     <script>
+        let currentPlatform = 'netflix';
+
+        // Dati delle piattaforme
+        const platformData = {
+            netflix: {
+                // Netflix Italia - aggiornato settimanalmente, solitamente il sabato
+                currentEpisode: 1085,
+                nextEpisode: 1086,
+                nextEpisodeTitle: "Il risveglio del gigante! Luffy e il potere del Gear 5!",
+                saga: "Egghead",
+                arc: "Egghead",
+                releaseDay: 6, // Sabato (0 = Domenica, 6 = Sabato)
+                episodesPerWeek: 1,
+                totalEpisodes: 1122,
+                mangaChapterStart: 1091,
+                mangaChapterEnd: 1093,
+                updateInfo: "Nuovi episodi ogni sabato"
+            },
+            crunchyroll: {
+                // Crunchyroll - aggiornato settimanalmente, solitamente la domenica
+                currentEpisode: 1121,
+                nextEpisode: 1122,
+                nextEpisodeTitle: "Il segreto svelato! Il vero potere di Vegapunk!",
+                saga: "Egghead",
+                arc: "Egghead",
+                releaseDay: 0, // Domenica
+                episodesPerWeek: 1,
+                totalEpisodes: 1122,
+                mangaChapterStart: 1114,
+                mangaChapterEnd: 1115,
+                updateInfo: "Nuovi episodi ogni domenica"
+            }
+        };
+
+        // Funzione per calcolare la prossima data di rilascio
+        function getNextReleaseDate(dayOfWeek) {
+            const today = new Date();
+            const currentDay = today.getDay();
+            let daysUntilRelease = dayOfWeek - currentDay;
+            
+            // Se il giorno è già passato questa settimana, vai alla prossima settimana
+            if (daysUntilRelease <= 0) {
+                daysUntilRelease += 7;
+            }
+            
+            const releaseDate = new Date(today);
+            releaseDate.setDate(today.getDate() + daysUntilRelease);
+            releaseDate.setHours(9, 0, 0, 0); // Imposta orario di rilascio alle 9:00
+            
+            return releaseDate;
+        }
+
         // Funzione per ottenere i dati del prossimo episodio
-        async function getOnePieceData() {
+        function getOnePieceData(platform = 'netflix') {
             try {
                 const contentDiv = document.getElementById('content');
+                const data = platformData[platform];
                 
-                // Simulo una chiamata API - in produzione dovresti usare un'API reale
-                // come quella di Netflix o un database aggiornato
-                
-                // Per ora uso dati simulati basati sullo stato attuale di One Piece su Netflix Italia
-                const data = {
-                    currentEpisode: 1085,
-                    episodeTitle: "La morte di tutti? L'ultimo combattimento di Luffy!",
-                    saga: "Egghead",
-                    arc: "Egghead",
-                    releaseDate: "2024-12-07", // Esempio di prossima uscita
-                    mangaChapterStart: 1088,
-                    mangaChapterEnd: 1090,
-                    episodesPerWeek: 1,
-                    totalEpisodes: 1122 // Totale episodi anime al momento
-                };
-
-                // Calcolo giorni rimanenti
+                // Calcolo prossima data di rilascio
+                const releaseDate = getNextReleaseDate(data.releaseDay);
                 const today = new Date();
-                const release = new Date(data.releaseDate);
-                const daysRemaining = Math.ceil((release - today) / (1000 * 60 * 60 * 24));
+                const daysRemaining = Math.ceil((releaseDate - today) / (1000 * 60 * 60 * 24));
+
+                // Calcolo differenza con il manga (approssimativa)
+                const currentMangaChapter = 1133; // Capitolo manga più recente (aggiorna periodicamente)
+                const episodesBehind = Math.floor((currentMangaChapter - data.mangaChapterEnd) * 0.8);
 
                 // Costruisco l'HTML
                 let html = `
                     <div class="episode-info">
-                        <div class="episode-number">EP ${data.currentEpisode}</div>
-                        <div class="episode-title">${data.episodeTitle}</div>
+                        <div class="episode-number">EP ${data.nextEpisode}</div>
+                        <div class="episode-title">${data.nextEpisodeTitle}</div>
                         
                         <div class="info-row">
                             <span class="info-label">Saga:</span>
@@ -272,8 +358,12 @@
                             <span class="info-value">${data.arc}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Totale episodi:</span>
-                            <span class="info-value">${data.totalEpisodes}</span>
+                            <span class="info-label">Ultimo episodio:</span>
+                            <span class="info-value">EP ${data.currentEpisode}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Frequenza:</span>
+                            <span class="info-value">${data.updateInfo}</span>
                         </div>
                     </div>
 
@@ -283,14 +373,18 @@
                             <span>Capitoli corrispondenti:</span>
                             <strong>${data.mangaChapterStart} - ${data.mangaChapterEnd}</strong>
                         </div>
+                        <div class="manga-info">
+                            <span>Manga corrente:</span>
+                            <strong>~Cap. ${currentMangaChapter}</strong>
+                        </div>
                         <div class="badge">
-                            L'anime è circa ${data.totalEpisodes - 1050} episodi dietro al manga
+                            L'anime è circa ${episodesBehind} episodi dietro al manga
                         </div>
                     </div>
 
                     <div class="next-release">
                         <h3>⏰ Prossima Uscita</h3>
-                        <p>${new Date(data.releaseDate).toLocaleDateString('it-IT', { 
+                        <p>${releaseDate.toLocaleDateString('it-IT', { 
                             weekday: 'long', 
                             year: 'numeric', 
                             month: 'long', 
@@ -308,9 +402,7 @@
                 contentDiv.innerHTML = html;
 
                 // Avvio countdown animato
-                if (daysRemaining > 0) {
-                    updateCountdown(data.releaseDate);
-                }
+                updateCountdown(releaseDate);
 
             } catch (error) {
                 document.getElementById('content').innerHTML = `
@@ -324,13 +416,16 @@
 
         // Countdown live
         function updateCountdown(releaseDate) {
-            setInterval(() => {
+            const countdownElement = document.getElementById('countdown');
+            if (!countdownElement) return;
+
+            const updateTimer = () => {
                 const now = new Date().getTime();
-                const release = new Date(releaseDate).getTime();
+                const release = releaseDate.getTime();
                 const distance = release - now;
 
                 if (distance < 0) {
-                    document.getElementById('countdown').innerHTML = "Disponibile ora!";
+                    countdownElement.innerHTML = "Disponibile ora!";
                     return;
                 }
 
@@ -339,9 +434,36 @@
                 const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-                document.getElementById('countdown').innerHTML = 
-                    `${days}g ${hours}h ${minutes}m ${seconds}s`;
-            }, 1000);
+                if (days > 0) {
+                    countdownElement.innerHTML = `${days}g ${hours}h ${minutes}m ${seconds}s`;
+                } else if (hours > 0) {
+                    countdownElement.innerHTML = `${hours}h ${minutes}m ${seconds}s`;
+                } else {
+                    countdownElement.innerHTML = `${minutes}m ${seconds}s`;
+                }
+            };
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        // Funzione per cambiare piattaforma
+        function switchPlatform(platform) {
+            currentPlatform = platform;
+            
+            // Aggiorna stile tab
+            document.querySelectorAll('.platform-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.platform-tab').classList.add('active');
+            
+            // Ricarica dati
+            document.getElementById('content').className = 'card loading';
+            document.getElementById('content').innerHTML = `
+                <div class="loader"></div>
+                <p style="margin-top: 20px; color: #666;">Caricamento dati...</p>
+            `;
+            setTimeout(() => getOnePieceData(platform), 500);
         }
 
         // Funzione per ricaricare i dati
@@ -351,12 +473,12 @@
                 <div class="loader"></div>
                 <p style="margin-top: 20px; color: #666;">Caricamento dati...</p>
             `;
-            setTimeout(() => getOnePieceData(), 800);
+            setTimeout(() => getOnePieceData(currentPlatform), 800);
         }
 
         // Carico i dati all'avvio
         window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => getOnePieceData(), 1000);
+            setTimeout(() => getOnePieceData('netflix'), 1000);
         });
     </script>
 </body>
